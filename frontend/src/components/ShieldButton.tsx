@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
@@ -166,8 +166,22 @@ function OnboardingModal({
 export function ShieldButton() {
   const { shieldState, deployShield, redeployShield, refreshShieldPack } = useShield();
   const [modalOpen, setModalOpen] = useState(false);
+  const [pendingInstallDismissed, setPendingInstallDismissed] = useState(false);
+
+  useEffect(() => {
+    if (shieldState !== "pending_install") {
+      setPendingInstallDismissed(false);
+      setModalOpen(false);
+      return;
+    }
+
+    if (!pendingInstallDismissed) {
+      setModalOpen(true);
+    }
+  }, [pendingInstallDismissed, shieldState]);
 
   const handleDeploy = async () => {
+    setPendingInstallDismissed(false);
     await deployShield();
     // Trigger confetti
     confetti({
@@ -181,6 +195,7 @@ export function ShieldButton() {
     setModalOpen(true);
   };
 
+<<<<<<< HEAD
   const handleRedeploy = async () => {
     await redeployShield();
     confetti({
@@ -218,6 +233,8 @@ export function ShieldButton() {
     setTimeout(() => setModalOpen(true), 0);
   }
 
+=======
+>>>>>>> c2f64050592ea3756bc6a31e7be1755038b583c1
   if (shieldState === "active") {
     return (
       <div style={{ display: "inline-flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
@@ -327,7 +344,10 @@ export function ShieldButton() {
 
         <OnboardingModal
           open={modalOpen}
-          onClose={() => setModalOpen(false)}
+          onClose={() => {
+            setModalOpen(false);
+            setPendingInstallDismissed(true);
+          }}
         />
       </>
     );

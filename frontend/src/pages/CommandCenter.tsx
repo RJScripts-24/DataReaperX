@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { useNavigate } from "react-router";
 import { Activity, Shield, Trash2, Scale, Maximize2, X } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer } from "recharts";
 import { toast } from "sonner";
 
+import { AppNavbar } from "../components/AppNavbar";
 import { PressureFilter } from "../components/PressureFilter";
 import { PressureText } from "../components/PressureText";
-import { AnimatedDataReaperLogo } from "../components/AnimatedDataReaperLogo";
 import { ApiClientError } from "../lib/apiClient";
 import apiClient from "../lib/apiClient";
 import { createScan, stopScan } from "../lib/api";
@@ -355,7 +354,6 @@ function extractConflictScanId(error: ApiClientError): string | null {
 }
 
 export default function CommandCenter() {
-  const navigate = useNavigate();
   const { setActiveScan } = useScanContext();
   const scanId = useRequireScan();
   const session = getAuthSession();
@@ -631,6 +629,25 @@ export default function CommandCenter() {
   );
 
 
+  useEffect(() => {
+    if (!isRadarExpanded && !isFeedExpanded) {
+      return;
+    }
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") {
+        return;
+      }
+      setIsRadarExpanded(false);
+      setIsFeedExpanded(false);
+    };
+
+    window.addEventListener("keydown", handleEscape);
+    return () => {
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [isFeedExpanded, isRadarExpanded]);
+
   const renderRadar = (expanded: boolean) => (
     <div className={`relative w-full aspect-square mx-auto ${expanded ? "max-w-[700px]" : "max-w-[460px]"}`}>
       <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 400" style={{ filter: "url(#pencil-sketch)" }}>
@@ -816,6 +833,7 @@ export default function CommandCenter() {
       <PressureFilter />
       <ConnectionBanner status={realtimeStatus} />
 
+<<<<<<< HEAD
       <nav
         className="sticky top-0 z-50 pt-4 pb-3 px-6 md:px-12 lg:px-16 flex items-center justify-between backdrop-blur-sm"
         style={{ backgroundColor: "rgba(245, 243, 239, 0.85)", borderBottom: "1.5px dashed rgba(0,0,0,0.15)" }}
@@ -878,6 +896,11 @@ export default function CommandCenter() {
             </button>
           </div>
 
+=======
+      <AppNavbar
+        active="dashboard"
+        rightSlot={
+>>>>>>> c2f64050592ea3756bc6a31e7be1755038b583c1
           <div className="flex items-center gap-3">
             <div className="hidden lg:flex items-center gap-2">
               <motion.div
@@ -978,8 +1001,8 @@ export default function CommandCenter() {
               {isStartingNewScan ? "Starting..." : "Start New Scan"}
             </button>
           </div>
-        </div>
-      </nav>
+        }
+      />
 
       <div className="max-w-[1600px] mx-auto px-4 py-4 relative z-10">
         <div className="mb-6 border-b-[1.5px] border-dashed border-black/10 pb-5">
@@ -1255,11 +1278,19 @@ export default function CommandCenter() {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-12"
             style={{ background: "rgba(253, 251, 247, 0.82)", backdropFilter: "blur(12px)" }}
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) {
+                setIsRadarExpanded(false);
+              }
+            }}
           >
-            <div className="absolute top-8 right-8">
+            <div className="absolute top-8 right-8 z-20">
               <button
                 type="button"
-                onClick={() => setIsRadarExpanded(false)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setIsRadarExpanded(false);
+                }}
                 className="p-3 rounded-full hover:bg-black/10 transition-colors border-2 border-black/20 bg-white/50"
               >
                 <X className="w-6 h-6 text-[#1a1a1a]" />
@@ -1303,11 +1334,19 @@ export default function CommandCenter() {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-12"
             style={{ background: "rgba(10,10,10,0.85)", backdropFilter: "blur(12px)" }}
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) {
+                setIsFeedExpanded(false);
+              }
+            }}
           >
-            <div className="absolute top-8 right-8">
+            <div className="absolute top-8 right-8 z-20">
               <button
                 type="button"
-                onClick={() => setIsFeedExpanded(false)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setIsFeedExpanded(false);
+                }}
                 className="p-3 rounded-full hover:bg-white/10 transition-colors border-2 border-white/20 bg-black/50"
               >
                 <X className="w-6 h-6 text-white" />
