@@ -3,7 +3,7 @@
   "name": "DataReaper Tripwire Shield",
   "version": "1.0.0",
   "description": "Active defense layer for DataReaper. Monitors for malicious sites and blocks credential theft.",
-  "permissions": ["storage", "tabs", "scripting", "webNavigation", "alarms"],
+  "permissions": ["storage", "tabs", "scripting", "webNavigation", "alarms", "contextMenus"],
   "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "background.js",
@@ -16,7 +16,7 @@
       "run_at": "document_idle"
     },
     {
-      "matches": ["http://localhost:5173/*"],
+      "matches": ["http://localhost:5173/*", "http://127.0.0.1:5173/*"],
       "js": ["token-bridge.js"],
       "run_at": "document_idle"
     }

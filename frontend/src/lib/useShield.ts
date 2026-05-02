@@ -71,20 +71,21 @@ export function useShield() {
     return () => window.removeEventListener("message", handler);
   }, []);
 
+  const broadcastShieldToken = useCallback((shield_token: string) => {
+    (window as unknown as { __DR_SHIELD_TOKEN__?: string }).__DR_SHIELD_TOKEN__ = shield_token;
+    document.dispatchEvent(new CustomEvent("dr:shield-token-ready", { detail: { token: shield_token } }));
+    sessionStorage.setItem("dr_shield_token", shield_token);
+    window.postMessage(
+      { type: "DR_REGISTER_TOKEN", token: shield_token },
+      window.location.origin
+    );
+  }, []);
+
   const deployShield = useCallback(async () => {
     try {
       setShieldState("downloading");
       const { shield_token } = await requestShieldToken();
-      // Expose token for extension to pick up via injected content script
-      (window as any).__DR_SHIELD_TOKEN__ = shield_token;
-      document.dispatchEvent(new CustomEvent("dr:shield-token-ready", { detail: { token: shield_token } }));
-      // Store in sessionStorage as fallback
-      sessionStorage.setItem("dr_shield_token", shield_token);
-      // Broadcast to any already-installed extension via window.postMessage
-      window.postMessage(
-        { type: "DR_REGISTER_TOKEN", token: shield_token },
-        window.location.origin
-      );
+      broadcastShieldToken(shield_token);
       setShieldState("pending_install");
       return shield_token;
     } catch (e) {
@@ -92,7 +93,37 @@ export function useShield() {
       setShieldState("error");
       throw e;
     }
-  }, []);
+  }, [broadcastShieldToken]);
+
+  /** Same token + broadcast as deploy, but keeps UI in active — for downloading a fresh extension zip after updates. */
+  const redeployShield = useCallback(async () => {
+    try {
+      setShieldState("downloading");
+      const { shield_token } = await requestShieldToken();
+      broadcastShieldToken(shield_token);
+      setShieldState("active");
+      return shield_token;
+    } catch (e) {
+      setError("Failed to regenerate shield token. Please try again.");
+      setShieldState("error");
+      throw e;
+    }
+  }, [broadcastShieldToken]);
+
+  /** Fresh token + broadcast, then back to idle — for “latest zip” without entering the pending-install flow. */
+  const refreshShieldPack = useCallback(async () => {
+    try {
+      setShieldState("downloading");
+      const { shield_token } = await requestShieldToken();
+      broadcastShieldToken(shield_token);
+      setShieldState("idle");
+      return shield_token;
+    } catch (e) {
+      setError("Failed to refresh shield token. Please try again.");
+      setShieldState("error");
+      throw e;
+    }
+  }, [broadcastShieldToken]);
 
   return { shieldState, lastSeen, error, deployShield };
 }

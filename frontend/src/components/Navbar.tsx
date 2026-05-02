@@ -76,6 +76,37 @@ export function Navbar() {
         {/* Right: CTA */}
         <div className="hidden md:flex" style={{ alignItems: "center", gap: 12 }}>
           <button
+<<<<<<< HEAD
+            onClick={() => navigate("/shield-logs")}
+            className="hand-drawn-button"
+            style={{
+              fontSize: "14px",
+              padding: "10px 18px",
+              cursor: "pointer",
+              backgroundColor: "#f1eee8",
+            }}
+          >
+            <PressureText variant="medium" className="paper-text" style={{ fontFamily: "'Patrick Hand', cursive" }}>
+              Shield Logs
+            </PressureText>
+          </button>
+          <button
+            onClick={() => navigate("/shadow-browser")}
+            className="hand-drawn-button"
+            style={{
+              fontSize: "14px",
+              padding: "10px 18px",
+              cursor: "pointer",
+              backgroundColor: "#f1eee8",
+            }}
+          >
+            <PressureText variant="medium" className="paper-text" style={{ fontFamily: "'Patrick Hand', cursive" }}>
+              Shadow Browser
+            </PressureText>
+          </button>
+          <button
+=======
+>>>>>>> c2f64050592ea3756bc6a31e7be1755038b583c1
             onClick={() => navigate("/onboarding")}
             className="hand-drawn-button"
             data-reaper-expression="happy"
@@ -129,6 +160,23 @@ export function Navbar() {
             }}
           >
             <button
+<<<<<<< HEAD
+              onClick={() => navigate("/shield-logs")}
+              className="hand-drawn-button"
+              style={{ fontSize: "16px", padding: "12px", width: "100%" }}
+            >
+              Shield Logs
+            </button>
+            <button
+              onClick={() => navigate("/shadow-browser")}
+              className="hand-drawn-button"
+              style={{ fontSize: "16px", padding: "12px", width: "100%" }}
+            >
+              Shadow Browser
+            </button>
+            <button
+=======
+>>>>>>> c2f64050592ea3756bc6a31e7be1755038b583c1
               onClick={() => navigate("/onboarding")}
               className="hand-drawn-button"
               data-reaper-expression="happy"

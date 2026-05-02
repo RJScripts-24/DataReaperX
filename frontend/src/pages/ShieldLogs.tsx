@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import { AppNavbar } from "../components/AppNavbar";
 import { PressureText } from "../components/PressureText";
+<<<<<<< HEAD
+=======
 import { useRequireAuth } from "../lib/scanContext";
 
+>>>>>>> c2f64050592ea3756bc6a31e7be1755038b583c1
 const COLORS = {
   bg: "#f5f3ef",
   card: "#fdfbf7",

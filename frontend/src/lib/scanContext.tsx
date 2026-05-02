@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router";
-import { getAuthSession } from "./sessionManager";
+import { getAuthSession, isScanPending } from "./sessionManager";
 
 const ACTIVE_SCAN_STORAGE_KEY = "dr_active_scan_id";
 const SESSION_STORAGE_KEY = "dr_session_id";
@@ -126,7 +126,7 @@ export function useRequireScan(): string | null {
       navigate("/onboarding", { replace: true, state: { from: location.pathname } });
       return;
     }
-    if (!scanId) {
+    if (!scanId && !isScanPending()) {
       navigate("/onboarding", { replace: true, state: { from: location.pathname } });
     }
   }, [location.pathname, navigate, scanId, session]);
