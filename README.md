@@ -370,7 +370,7 @@ DataReaper follows a modern microservices-inspired architecture with clear separ
    DATABASE_URL=postgresql+asyncpg://user:pass@localhost/datareaper
 
    # Redis
-   REDIS_URL=redis://localhost:6379
+   REDIS_URL=redis://127.0.0.1:6379/0
 
    # AI
    GROQ_API_KEY=your_groq_api_key
