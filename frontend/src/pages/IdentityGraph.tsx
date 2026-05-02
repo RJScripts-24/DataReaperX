@@ -4,9 +4,9 @@ import { useNavigate } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { X, Play, Filter, Eye, EyeOff } from "lucide-react";
 
+import { AppNavbar } from "../components/AppNavbar";
 import { PressureFilter } from "../components/PressureFilter";
 import { PressureText } from "../components/PressureText";
-import { AnimatedDataReaperLogo } from "../components/AnimatedDataReaperLogo";
 import {
   dataReaperQueryKeys,
   useIdentityGraphNodeQuery,
@@ -1899,52 +1899,9 @@ export default function IdentityGraph() {
       <PressureFilter />
       <ConnectionBanner status={realtimeStatus} />
 
-      <nav
-        className="sticky top-0 z-50 pt-4 pb-3 px-6 md:px-12 lg:px-16 flex items-center justify-between backdrop-blur-sm"
-        style={{ backgroundColor: "rgba(245, 243, 239, 0.85)", borderBottom: "1.5px dashed rgba(0,0,0,0.15)" }}
-      >
-        <div className="max-w-[1600px] w-full mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}> 
-            <AnimatedDataReaperLogo imageStyle={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.15))" }} />
-            <PressureText as="span" className="text-3xl tracking-tight" style={{ fontFamily: "'Dancing Script', cursive", fontWeight: 700 }}>
-              DataReaper
-            </PressureText>
-          </div>
-
-          <div className="hidden md:flex items-center gap-8">
-            <button 
-              onClick={() => navigate("/command-center")} 
-              className="text-xl pencil-text transition-colors opacity-60 hover:opacity-100"
-              data-reaper-expression="thinking"
-              data-reaper-phrases="Dashboard view. Checking the bird's eye view.||Back to the command deck."
-            >
-              Dashboard
-            </button>
-            <button 
-              onClick={() => navigate("/war-room")} 
-              className="text-xl pencil-text transition-colors opacity-60 hover:opacity-100"
-              data-reaper-expression="thinking"
-              data-reaper-phrases="Tactic change. Let's go to the War Room.||Disputes are waiting. Let's get aggressive."
-            >
-              War Room
-            </button>
-            <button 
-              className="text-xl pencil-text transition-colors opacity-100 hover:opacity-70"
-              data-reaper-expression="happy"
-              data-reaper-phrases="Behold the web of digital decay. It's beautiful.||I see the threads they try to hide.||Connecting the digital dots."
-            >
-              Identity Graph
-            </button>
-            <button
-              onClick={() => navigate("/access-mirror")}
-              className="text-xl pencil-text transition-colors opacity-60 hover:opacity-100"
-              data-reaper-expression="surprised"
-              data-reaper-phrases="Cutting off third-party access. Feels good.||Let's see what they actually know about you.||Time to audit the damage."
-            >
-              Access Mirror
-            </button>
-          </div>
-
+      <AppNavbar
+        active="identity-graph"
+        rightSlot={
           <div className="flex items-center gap-3">
             <PressureText as="span" className="text-base hidden lg:block" style={{ fontFamily: "'Patrick Hand', cursive", color: COLORS.textSec }}>
               {scanQuery.data?.status ? `Lifecycle: ${scanQuery.data.status}` : "Loading scan"}
@@ -1962,8 +1919,8 @@ export default function IdentityGraph() {
               Start New Scan
             </button>
           </div>
-        </div>
-      </nav>
+        }
+      />
 
       <div className="flex h-[calc(100vh-73px)]">
         <motion.div
