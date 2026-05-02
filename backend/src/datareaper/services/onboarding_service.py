@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from time import perf_counter
 
 from sqlalchemy import select
@@ -20,6 +21,7 @@ from datareaper.core.logging import get_logger
 
 
 logger = get_logger(__name__)
+RUNNING_SCAN_STALE_SECONDS = 120
 
 
 def _mask_seed(seed: str) -> str:
@@ -40,7 +42,7 @@ def _mask_seed(seed: str) -> str:
     return "***"
 
 
-async def _enqueue_osint_pipeline(scan_id: str) -> str | None:
+async def _enqueue_osint_pipeline(scan_id: str, *, dedupe: bool = False) -> str | None:
     try:
         from datareaper.workers.queue import TaskQueue, get_arq_pool
     except Exception as exc:
@@ -55,14 +57,29 @@ async def _enqueue_osint_pipeline(scan_id: str) -> str | None:
 
     try:
         queue = TaskQueue(pool)
-        job_id = await queue.enqueue("run_osint_pipeline", scan_id=scan_id)
-        logger.info("enqueue_osint_pipeline_success", scan_id=scan_id, job_id=job_id)
+        job_id = await queue.enqueue("run_osint_pipeline", dedupe=dedupe, scan_id=scan_id)
+        logger.info(
+            "enqueue_osint_pipeline_success",
+            scan_id=scan_id,
+            job_id=job_id,
+            dedupe=dedupe,
+        )
         return job_id
     except Exception as exc:
         logger.warning("enqueue_osint_pipeline_failed", scan_id=scan_id, error=str(exc))
         return None
     finally:
         await pool.close()
+
+
+def _is_stale_running_scan(scan: ScanJob, stale_seconds: int = RUNNING_SCAN_STALE_SECONDS) -> bool:
+    updated_at = scan.updated_at
+    if updated_at is None:
+        return True
+    if updated_at.tzinfo is None:
+        updated_at = updated_at.replace(tzinfo=UTC)
+    age_seconds = (datetime.now(UTC) - updated_at).total_seconds()
+    return age_seconds >= stale_seconds
 
 
 class OnboardingService:
@@ -142,6 +159,34 @@ class OnboardingService:
             return exposures.scalars().first() is not None
 
         if not is_terminal_scan_status(existing_scan.status):
+            if get_settings().app_env != "test" and _is_stale_running_scan(existing_scan):
+                existing_scan.current_stage = "queueing_osint_pipeline"
+                session.add(
+                    ActivityEvent(
+                        id=new_id("evt"),
+                        scan_job_id=existing_scan.id,
+                        event_type="System",
+                        message="Stale running scan detected; resuming OSINT pipeline.",
+                        payload={
+                            "stage": "initialize_scan",
+                            "mode": "stale_resume",
+                            "seed": normalized_seed,
+                        },
+                    )
+                )
+                await session.commit()
+                job_id = await _enqueue_osint_pipeline(existing_scan.id, dedupe=False)
+                if job_id:
+                    boot_log.append(f"Stale scan resumed (job: {job_id}).")
+                else:
+                    boot_log.append("Stale scan detected but queue unavailable. Check worker/Redis logs.")
+                return {
+                    "scan_id": existing_scan.id,
+                    "normalized_seed": normalized_seed,
+                    "status": "resuming",
+                    "boot_log": boot_log,
+                }
+
             boot_log.append("Existing scan is already in progress. Streaming latest findings.")
             return {
                 "scan_id": existing_scan.id,
@@ -180,7 +225,7 @@ class OnboardingService:
         await session.commit()
 
         if get_settings().app_env != "test":
-            job_id = await _enqueue_osint_pipeline(existing_scan.id)
+            job_id = await _enqueue_osint_pipeline(existing_scan.id, dedupe=False)
             if job_id:
                 boot_log.append(f"Incremental pipeline queued (job: {job_id}).")
             else:
@@ -310,7 +355,7 @@ class OnboardingService:
         # Avoid queueing side effects in tests where event loops are short-lived.
         if get_settings().app_env != "test":
             queue_started = perf_counter()
-            job_id = await _enqueue_osint_pipeline(scan_id)
+            job_id = await _enqueue_osint_pipeline(scan_id, dedupe=False)
             if job_id:
                 boot_log.append(f"Pipeline queued successfully (job: {job_id}).")
             else:

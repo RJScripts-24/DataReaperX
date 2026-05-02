@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
@@ -11,6 +11,24 @@ import {
   DialogHeader,
   DialogTitle,
 } from "./ui/dialog";
+
+const CONTROL_TEXT: CSSProperties = {
+  fontFamily: "'Patrick Hand', cursive",
+  fontSize: "1.125rem",
+  padding: "14px 28px",
+  minHeight: 48,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 8,
+};
+
+const SECONDARY_BTN: CSSProperties = {
+  ...CONTROL_TEXT,
+  backgroundColor: "#fff",
+  color: "#2a4a6f",
+  borderColor: "#4a6fa5",
+};
 
 // --------------------------------------------------------------------------
 // Onboarding Modal (shown when state === "pending_install")
@@ -234,28 +252,30 @@ export function ShieldButton() {
 
   if (shieldState === "active") {
     return (
-      <div style={{ display: "inline-flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+      <div style={{ display: "inline-flex", alignItems: "center", gap: 14, flexWrap: "wrap", justifyContent: "flex-end" }}>
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           style={{
             display: "inline-flex",
             alignItems: "center",
-            gap: 8,
+            gap: 10,
             backgroundColor: "rgba(79,125,92,0.12)",
             border: "1.5px solid #4f7d5c",
             borderRadius: 999,
-            padding: "4px 14px",
+            padding: "12px 22px",
+            minHeight: 48,
             fontFamily: "'Patrick Hand', cursive",
             color: "#4f7d5c",
-            fontSize: 13,
-            boxShadow: "0 0 10px rgba(79,125,92,0.35)",
+            fontSize: "1.125rem",
+            fontWeight: 600,
+            boxShadow: "0 0 12px rgba(79,125,92,0.35)",
           }}
         >
           <span
             style={{
-              width: 8,
-              height: 8,
+              width: 10,
+              height: 10,
               borderRadius: "50%",
               backgroundColor: "#4f7d5c",
               display: "inline-block",
@@ -270,14 +290,7 @@ export function ShieldButton() {
           onClick={() => void handleRedeploy()}
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.96 }}
-          style={{
-            fontFamily: "'Patrick Hand', cursive",
-            fontSize: 13,
-            padding: "6px 14px",
-            backgroundColor: "#fff",
-            color: "#2a4a6f",
-            borderColor: "#4a6fa5",
-          }}
+          style={SECONDARY_BTN}
         >
           🔄 Redeploy
         </motion.button>
@@ -291,16 +304,17 @@ export function ShieldButton() {
         style={{
           display: "inline-flex",
           alignItems: "center",
-          gap: 8,
+          gap: 10,
           fontFamily: "'Caveat', cursive",
-          fontSize: 16,
+          fontSize: "1.35rem",
           color: "#4a6fa5",
+          minHeight: 48,
         }}
       >
         <motion.span
           animate={{ rotate: 360 }}
           transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
-          style={{ display: "inline-block", fontSize: 20 }}
+          style={{ display: "inline-block", fontSize: 26 }}
         >
           ⚔️
         </motion.span>
@@ -312,11 +326,11 @@ export function ShieldButton() {
   if (shieldState === "pending_install") {
     return (
       <>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 14, flexWrap: "wrap", justifyContent: "flex-end" }}>
           <button
             className="hand-drawn-button"
             disabled
-            style={{ opacity: 0.6 }}
+            style={{ ...CONTROL_TEXT, opacity: 0.65, cursor: "not-allowed" }}
           >
             ⏳ Awaiting Extension Install
           </button>
@@ -326,14 +340,7 @@ export function ShieldButton() {
             onClick={() => void handlePendingRedeploy()}
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.96 }}
-            style={{
-              fontFamily: "'Patrick Hand', cursive",
-              fontSize: 13,
-              padding: "6px 14px",
-              backgroundColor: "#fff",
-              color: "#2a4a6f",
-              borderColor: "#4a6fa5",
-            }}
+            style={SECONDARY_BTN}
           >
             🔄 Redeploy
           </motion.button>
@@ -352,19 +359,15 @@ export function ShieldButton() {
 
   // "idle" or "error" — Deploy opens the install modal; Redeploy only refreshes token + zip download
   return (
-    <div style={{ display: "inline-flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+    <div style={{ display: "inline-flex", alignItems: "center", gap: 14, flexWrap: "wrap", justifyContent: "flex-end" }}>
       <motion.button
         className="hand-drawn-button"
         onClick={() => void handleDeploy()}
         whileHover={{ scale: 1.03 }}
         whileTap={{ scale: 0.96 }}
         style={{
+          ...CONTROL_TEXT,
           animation: "drShieldPulse 2s infinite",
-          fontFamily: "'Patrick Hand', cursive",
-          fontSize: 14,
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 6,
         }}
       >
         ⚔️ Deploy Active Shield
@@ -375,16 +378,7 @@ export function ShieldButton() {
         onClick={() => void handleRedeployWithoutModal()}
         whileHover={{ scale: 1.03 }}
         whileTap={{ scale: 0.96 }}
-        style={{
-          fontFamily: "'Patrick Hand', cursive",
-          fontSize: 14,
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 6,
-          backgroundColor: "#fff",
-          color: "#2a4a6f",
-          borderColor: "#4a6fa5",
-        }}
+        style={SECONDARY_BTN}
         title="Fresh token + latest tripwire zip without the install pop-up. Reload unpacked in chrome://extensions."
       >
         🔄 Redeploy

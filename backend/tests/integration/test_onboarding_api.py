@@ -2,11 +2,11 @@ import asyncio
 
 from fastapi.testclient import TestClient
 
+from datareaper.comms.oauth import GoogleIdentity
+from datareaper.core.config import get_settings
 from datareaper.db.repositories.scan_repo import ScanRepository
 from datareaper.db.session import SessionLocal
 from datareaper.main import app
-
-from tests.integration.auth import google_session_headers
 
 
 def _clear_active_scans() -> None:
@@ -25,10 +25,102 @@ def _clear_active_scans() -> None:
     asyncio.run(_run())
 
 
-def test_onboarding_api(monkeypatch) -> None:
+def _create_google_session(client: TestClient, monkeypatch, email: str) -> str:
+    monkeypatch.setattr(
+        "datareaper.api.routes.v1_contract.verify_google_id_token",
+        lambda *_args, **_kwargs: GoogleIdentity(email=email, subject="google-sub-test"),
+    )
+
+    response = client.post(
+        "/v1/sessions",
+        json={
+            "idToken": "fake-google-id-token",
+            "client": {
+                "appVersion": "test-suite",
+                "platform": "browser",
+                "timezone": "UTC",
+                "locale": "en-US",
+            },
+        },
+    )
+    assert response.status_code == 201
+    return response.json()["sessionId"]
+
+
+def test_v1_google_auth_config_uses_google_client_id(monkeypatch) -> None:
+    google_client_id = "google-client-id.apps.googleusercontent.com"
+    monkeypatch.setenv("GOOGLE_CLIENT_ID", google_client_id)
+    monkeypatch.setenv("GMAIL_CLIENT_ID", "legacy-client-id.apps.googleusercontent.com")
+    get_settings.cache_clear()
+
+    try:
+        with TestClient(app) as client:
+            response = client.get("/v1/auth/google/config")
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload.get("configured") is True
+        assert payload.get("clientId") == google_client_id
+    finally:
+        get_settings.cache_clear()
+
+
+def test_v1_google_auth_config_ignores_gmail_client_id_when_google_missing(monkeypatch) -> None:
+    monkeypatch.setenv("GOOGLE_CLIENT_ID", "")
+    monkeypatch.setenv("GMAIL_CLIENT_ID", "legacy-client-id.apps.googleusercontent.com")
+    get_settings.cache_clear()
+
+    try:
+        with TestClient(app) as client:
+            response = client.get("/v1/auth/google/config")
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload.get("configured") is False
+        assert payload.get("clientId") == ""
+    finally:
+        get_settings.cache_clear()
+
+
+def test_v1_create_session_uses_google_client_id(monkeypatch) -> None:
+    captured: dict[str, str] = {}
+    google_client_id = "google-session-client-id.apps.googleusercontent.com"
+    monkeypatch.setenv("GOOGLE_CLIENT_ID", google_client_id)
+    monkeypatch.setenv("GMAIL_CLIENT_ID", "legacy-session-client-id.apps.googleusercontent.com")
+    get_settings.cache_clear()
+
+    def fake_verify_google_id_token(id_token: str, client_id: str) -> GoogleIdentity:
+        captured["id_token"] = id_token
+        captured["client_id"] = client_id
+        return GoogleIdentity(email="session-user@email.com", subject="google-sub-test")
+
+    monkeypatch.setattr(
+        "datareaper.api.routes.v1_contract.verify_google_id_token",
+        fake_verify_google_id_token,
+    )
+
+    try:
+        with TestClient(app) as client:
+            response = client.post(
+                "/v1/sessions",
+                json={
+                    "idToken": "fake-google-id-token",
+                    "client": {
+                        "appVersion": "test-suite",
+                        "platform": "browser",
+                        "timezone": "UTC",
+                        "locale": "en-US",
+                    },
+                },
+            )
+        assert response.status_code == 201
+        assert captured.get("id_token") == "fake-google-id-token"
+        assert captured.get("client_id") == google_client_id
+    finally:
+        get_settings.cache_clear()
+
+
+def test_onboarding_api() -> None:
     _clear_active_scans()
     with TestClient(app) as client:
-        headers = google_session_headers(client, monkeypatch, "user@email.com")
         response = client.post(
             "/api/onboarding/initialize",
             json={
@@ -37,7 +129,6 @@ def test_onboarding_api(monkeypatch) -> None:
                 "jurisdiction": "DPDP",
                 "consent_confirmed": True,
             },
-            headers=headers,
         )
         assert response.status_code == 200
         payload = response.json()
@@ -47,19 +138,14 @@ def test_onboarding_api(monkeypatch) -> None:
         assert isinstance(payload.get("boot_log"), list)
         assert len(payload.get("boot_log", [])) > 0
 
-        stop_response = client.post(
-            f"/api/scans/{payload['scan_id']}/stop",
-            json={"reason": "test_cleanup"},
-            headers=headers,
-        )
+        stop_response = client.post(f"/api/scans/{payload['scan_id']}/stop", json={"reason": "test_cleanup"})
         assert stop_response.status_code == 200
 
 
 def test_v1_create_scan_api(monkeypatch) -> None:
     _clear_active_scans()
     with TestClient(app) as client:
-        headers = google_session_headers(client, monkeypatch, "user@email.com")
-        session_id = headers["X-Session-Id"]
+        session_id = _create_google_session(client, monkeypatch, "user@email.com")
         response = client.post(
             "/v1/scans",
             json={
@@ -81,10 +167,9 @@ def test_v1_create_scan_api(monkeypatch) -> None:
         assert stop_response.status_code == 200
 
 
-def test_api_stop_scan(monkeypatch) -> None:
+def test_api_stop_scan() -> None:
     _clear_active_scans()
     with TestClient(app) as client:
-        headers = google_session_headers(client, monkeypatch, "stop-api@email.com")
         initialized = client.post(
             "/api/onboarding/initialize",
             json={
@@ -93,22 +178,17 @@ def test_api_stop_scan(monkeypatch) -> None:
                 "jurisdiction": "DPDP",
                 "consent_confirmed": True,
             },
-            headers=headers,
         )
         assert initialized.status_code == 200
         scan_id = initialized.json()["scan_id"]
 
-        stopped = client.post(
-            f"/api/scans/{scan_id}/stop",
-            json={"reason": "integration_test"},
-            headers=headers,
-        )
+        stopped = client.post(f"/api/scans/{scan_id}/stop", json={"reason": "integration_test"})
         assert stopped.status_code == 200
         payload = stopped.json()
         assert payload.get("scan_id") == scan_id
         assert payload.get("status") == "cancelled"
 
-        status_response = client.get(f"/api/scans/{scan_id}", headers=headers)
+        status_response = client.get(f"/api/scans/{scan_id}")
         assert status_response.status_code == 200
         assert status_response.json().get("status") == "cancelled"
 
@@ -116,8 +196,7 @@ def test_api_stop_scan(monkeypatch) -> None:
 def test_v1_stop_scan(monkeypatch) -> None:
     _clear_active_scans()
     with TestClient(app) as client:
-        headers = google_session_headers(client, monkeypatch, "stop-v1@email.com")
-        session_id = headers["X-Session-Id"]
+        session_id = _create_google_session(client, monkeypatch, "stop-v1@email.com")
         created = client.post(
             "/v1/scans",
             json={
@@ -143,8 +222,7 @@ def test_v1_stop_scan(monkeypatch) -> None:
 def test_v1_rejects_seed_email_mismatch(monkeypatch) -> None:
     _clear_active_scans()
     with TestClient(app) as client:
-        headers = google_session_headers(client, monkeypatch, "owner@email.com")
-        session_id = headers["X-Session-Id"]
+        session_id = _create_google_session(client, monkeypatch, "owner@email.com")
         created = client.post(
             "/v1/scans",
             json={
@@ -162,8 +240,7 @@ def test_v1_rejects_seed_email_mismatch(monkeypatch) -> None:
 def test_v1_scan_conflict_returns_active_scan_id(monkeypatch) -> None:
     _clear_active_scans()
     with TestClient(app) as client:
-        headers = google_session_headers(client, monkeypatch, "conflict@email.com")
-        session_id = headers["X-Session-Id"]
+        session_id = _create_google_session(client, monkeypatch, "conflict@email.com")
         created = client.post(
             "/v1/scans",
             json={

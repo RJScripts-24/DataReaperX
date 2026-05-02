@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from datareaper.core.config import get_settings
+from datareaper.core.config import get_settings, validate_sender_config
 from datareaper.core.logging import configure_logging, get_logger
 from datareaper.db import models as _models  # noqa: F401
 from datareaper.db.base import Base
@@ -41,6 +41,7 @@ async def lifespan(app: FastAPI):
         startup_db_timeout_seconds=settings.app_startup_db_timeout_seconds,
         database_endpoint=_database_endpoint(settings.database_url),
     )
+    validate_sender_config()
 
     if engine is not None:
         try:

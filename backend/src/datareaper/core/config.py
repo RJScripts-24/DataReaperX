@@ -53,6 +53,9 @@ class Settings(BaseSettings):
     gmail_client_secret: str = ""
     gmail_refresh_token: str = ""
     gmail_sender_email: str = ""
+    gmail_sender_client_id: str = ""
+    gmail_sender_client_secret: str = ""
+    gmail_sender_refresh_token: str = ""
     playwright_headless: bool = True
     playwright_proxy_server: str = ""
     local_storage_path: str = "./storage"
@@ -102,3 +105,41 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+def validate_sender_config() -> bool:
+    """
+    Check whether central sender credentials are fully configured.
+
+    This function intentionally does not raise so the app can still boot in
+    environments where outbound broker dispatch is disabled.
+    """
+
+    from datareaper.core.logging import get_logger
+
+    logger = get_logger(__name__)
+    settings = get_settings()
+    required = [
+        ("GMAIL_SENDER_CLIENT_ID", settings.gmail_sender_client_id),
+        ("GMAIL_SENDER_CLIENT_SECRET", settings.gmail_sender_client_secret),
+        ("GMAIL_SENDER_REFRESH_TOKEN", settings.gmail_sender_refresh_token),
+        ("GMAIL_SENDER_EMAIL", settings.gmail_sender_email),
+    ]
+    missing = [name for name, value in required if not str(value or "").strip()]
+
+    if missing:
+        logger.warning(
+            "central_sender_not_configured",
+            missing_vars=missing,
+            message=(
+                "Central Gmail sender credentials are incomplete. "
+                "Outbound broker notices may fail until missing vars are set."
+            ),
+        )
+        return False
+
+    logger.info(
+        "central_sender_ready",
+        sender_email=settings.gmail_sender_email,
+    )
+    return True

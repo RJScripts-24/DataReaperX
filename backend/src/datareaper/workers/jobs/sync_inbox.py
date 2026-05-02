@@ -119,7 +119,7 @@ async def sync_inbox(ctx: dict, scan_id: str) -> dict:
             active_count += 1
 
     if active_count > 0 and queue is not None:
-        await queue.enqueue_in("sync_inbox", delay_seconds=300, scan_id=scan_id)
+        await queue.enqueue_in("sync_inbox", delay_seconds=300, dedupe=False, scan_id=scan_id)
     return {"scan_id": scan_id, "status": "ok", "updates": len(updates), "active": active_count}
 
 
