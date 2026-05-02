@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 import secrets
 from typing import Any, TypeVar
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -14,6 +14,7 @@ from sqlalchemy import select
 from datareaper.api.deps import DbSession, get_onboarding_service, get_scan_service
 from datareaper.comms.dispatch_recipients import resolve_dispatch_recipient
 from datareaper.comms.outbound_dispatcher import dispatch_notice
+from datareaper.comms.oauth import GoogleOAuthError, GoogleIdentity, verify_google_id_token
 from datareaper.core.config import get_settings
 from datareaper.core.exceptions import DataReaperError, InvalidSeedError, ResourceNotFoundError
 from datareaper.core.ids import new_id
@@ -50,6 +51,7 @@ from datareaper.schemas.api_v1 import (
     EngagementSummary,
     EscalateEngagementRequest,
     EscalateEngagementResponse,
+    GoogleAuthConfigResponse,
     IdentityGraphEdge,
     IdentityGraphFilters,
     IdentityGraphNode,
@@ -77,13 +79,19 @@ logger = get_logger(__name__)
 _SCAN_REPO = ScanRepository()
 _DASHBOARD_REPO = DashboardRepository()
 _SESSION_TTL = timedelta(hours=8)
-_SESSIONS: dict[str, datetime] = {}
+_SESSIONS: dict[str, "SessionPrincipal"] = {}
 _MANUAL_MESSAGES: dict[tuple[str, str], list[EngagementMessage]] = {}
 T = TypeVar("T")
 
 
 class StopScanRequest(BaseModel):
     reason: str | None = None
+
+
+class SessionPrincipal(BaseModel):
+    email: str
+    google_sub: str
+    expires_at: datetime
 
 
 def _api_error(status_code: int, code: str, message: str, details: list[dict[str, Any]] | None = None) -> JSONResponse:
@@ -100,6 +108,38 @@ def _api_error(status_code: int, code: str, message: str, details: list[dict[str
 
 def _now_utc() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _normalized_email(value: str | None) -> str:
+    return str(value or "").strip().lower()
+
+
+def _seed_matches_owner(bundle: dict[str, Any], owner_email: str) -> bool:
+    scan = bundle.get("scan", {})
+    return _normalized_email(scan.get("normalized_seed")) == _normalized_email(owner_email)
+
+
+def _require_session(x_session_id: str | None = Header(default=None, alias="X-Session-Id")) -> SessionPrincipal:
+    session_id = (x_session_id or "").strip()
+    if not session_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing session token.")
+
+    principal = _SESSIONS.get(session_id)
+    if principal is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session is invalid or expired.")
+
+    if principal.expires_at <= _now_utc():
+        _SESSIONS.pop(session_id, None)
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session has expired.")
+
+    return principal
+
+
+async def _load_owned_bundle(db: DbSession, scan_id: str, principal: SessionPrincipal) -> dict[str, Any]:
+    bundle = await _load_bundle(db, scan_id)
+    if not _seed_matches_owner(bundle, principal.email):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have access to this scan.")
+    return bundle
 
 
 def _parse_datetime(value: str | None) -> datetime:
@@ -343,26 +383,61 @@ async def _load_bundle(db: DbSession, scan_id: str) -> dict[str, Any]:
     return await _SCAN_REPO.load_scan_bundle(db, scan_id)
 
 
+@router.get("/auth/google/config", response_model=GoogleAuthConfigResponse)
+async def get_google_auth_config() -> GoogleAuthConfigResponse:
+    client_id = str(get_settings().gmail_client_id or "").strip()
+    return GoogleAuthConfigResponse(
+        configured=bool(client_id),
+        clientId=client_id,
+    )
+
+
 @router.post("/sessions", response_model=CreateSessionResponse, status_code=201)
 async def create_session(payload: CreateSessionRequest) -> CreateSessionResponse:
-    _ = payload
+    settings = get_settings()
+    try:
+        identity: GoogleIdentity = verify_google_id_token(payload.idToken, settings.gmail_client_id)
+    except GoogleOAuthError as exc:
+        message = str(exc)
+        if "not configured" in message.lower():
+            return _api_error(503, "google_oauth_not_configured", message)
+        return _api_error(401, "invalid_google_token", message)
+
     session_id = f"ses_{secrets.token_hex(12)}"
     expires_at = _now_utc() + _SESSION_TTL
-    _SESSIONS[session_id] = expires_at
-    return CreateSessionResponse(sessionId=session_id, expiresAt=expires_at)
+    _SESSIONS[session_id] = SessionPrincipal(
+        email=identity.email,
+        google_sub=identity.subject,
+        expires_at=expires_at,
+    )
+    return CreateSessionResponse(
+        sessionId=session_id,
+        expiresAt=expires_at,
+        email=identity.email,
+        googleSub=identity.subject,
+    )
 
 
 @router.post("/scans", response_model=CreateScanResponse, status_code=202)
 async def create_scan(
     payload: CreateScanRequest,
     db: DbSession,
+    principal: SessionPrincipal = Depends(_require_session),
     service: OnboardingService = Depends(get_onboarding_service),
 ):
     logger.info(
         "create_scan_requested",
         seed_type=payload.seed.type,
         jurisdiction_hint=payload.jurisdictionHint,
+        session_email=principal.email,
     )
+    if payload.seed.type != "email":
+        return _api_error(400, "invalid_seed_type", "Google OAuth sessions only support email scans.")
+
+    requested_seed = _normalized_email(payload.seed.value)
+    if requested_seed != principal.email:
+        return _api_error(403, "seed_mismatch", "Scan seed must match your signed-in Google email.")
+
     try:
         active_scan_ids = await _SCAN_REPO.list_active_scan_ids(db)
     except Exception as exc:
@@ -370,15 +445,30 @@ async def create_scan(
         active_scan_ids = []
 
     if active_scan_ids:
-        return _api_error(409, "scan_in_progress", "A scan is already in progress.")
+        owner_active_scan_ids: list[str] = []
+        for scan_id in active_scan_ids:
+            try:
+                active_bundle = await _load_bundle(db, scan_id)
+            except ResourceNotFoundError:
+                continue
+            if _seed_matches_owner(active_bundle, principal.email):
+                owner_active_scan_ids.append(scan_id)
+
+        if owner_active_scan_ids:
+            return _api_error(
+                409,
+                "scan_in_progress",
+                "A scan is already in progress for this account.",
+                details=[{"scanId": owner_active_scan_ids[0]}],
+            )
 
     jurisdiction = payload.jurisdictionHint if payload.jurisdictionHint != "AUTO" else get_settings().default_jurisdiction
 
     try:
         created = await service.initialize_scan(
             db,
-            seeds=[payload.seed.value],
-            seed_type=payload.seed.type,
+            seeds=[principal.email],
+            seed_type="email",
             jurisdiction=jurisdiction,
         )
     except (ValueError, InvalidSeedError) as exc:
@@ -417,9 +507,9 @@ async def create_scan(
 
 
 @router.get("/scans/{scanId}", response_model=Scan)
-async def get_scan(scanId: str, db: DbSession):
+async def get_scan(scanId: str, db: DbSession, principal: SessionPrincipal = Depends(_require_session)):
     try:
-        bundle = await _load_bundle(db, scanId)
+        bundle = await _load_owned_bundle(db, scanId, principal)
     except ResourceNotFoundError:
         return _api_error(404, "scan_not_found", f"Scan '{scanId}' was not found.")
 
@@ -444,8 +534,14 @@ async def stop_scan(
     scanId: str,
     payload: StopScanRequest,
     db: DbSession,
+    principal: SessionPrincipal = Depends(_require_session),
     service: ScanService = Depends(get_scan_service),
 ):
+    try:
+        await _load_owned_bundle(db, scanId, principal)
+    except ResourceNotFoundError:
+        return _api_error(404, "scan_not_found", f"Scan '{scanId}' was not found.")
+
     stopped = await service.stop_scan(db, scanId, reason=payload.reason)
     return {
         "scanId": scanId,
@@ -456,7 +552,12 @@ async def stop_scan(
 
 
 @router.get("/scans/{scanId}/dashboard/summary", response_model=DashboardSummary)
-async def get_dashboard_summary(scanId: str, db: DbSession):
+async def get_dashboard_summary(scanId: str, db: DbSession, principal: SessionPrincipal = Depends(_require_session)):
+    try:
+        await _load_owned_bundle(db, scanId, principal)
+    except ResourceNotFoundError:
+        return _api_error(404, "scan_not_found", f"Scan '{scanId}' was not found.")
+
     try:
         dashboard = await _DASHBOARD_REPO.get_dashboard(db, scanId)
     except ResourceNotFoundError:
@@ -493,9 +594,14 @@ async def get_dashboard_summary(scanId: str, db: DbSession):
 
 
 @router.get("/scans/{scanId}/dashboard/radar-targets", response_model=RadarTargetsResponse)
-async def get_radar_targets(scanId: str, db: DbSession, limit: int = Query(default=50, ge=1, le=200)):
+async def get_radar_targets(
+    scanId: str,
+    db: DbSession,
+    limit: int = Query(default=50, ge=1, le=200),
+    principal: SessionPrincipal = Depends(_require_session),
+):
     try:
-        bundle = await _load_bundle(db, scanId)
+        bundle = await _load_owned_bundle(db, scanId, principal)
     except ResourceNotFoundError:
         return _api_error(404, "scan_not_found", f"Scan '{scanId}' was not found.")
 
@@ -528,9 +634,10 @@ async def get_activity_logs(
     cursor: str | None = None,
     limit: int = Query(default=50, ge=1, le=200),
     types: str | None = None,
+    principal: SessionPrincipal = Depends(_require_session),
 ):
     try:
-        bundle = await _load_bundle(db, scanId)
+        bundle = await _load_owned_bundle(db, scanId, principal)
     except ResourceNotFoundError:
         return _api_error(404, "scan_not_found", f"Scan '{scanId}' was not found.")
 
@@ -559,9 +666,9 @@ async def get_activity_logs(
 
 
 @router.get("/scans/{scanId}/dashboard/agents", response_model=AgentStatusesResponse)
-async def get_dashboard_agents(scanId: str, db: DbSession):
+async def get_dashboard_agents(scanId: str, db: DbSession, principal: SessionPrincipal = Depends(_require_session)):
     try:
-        bundle = await _load_bundle(db, scanId)
+        bundle = await _load_owned_bundle(db, scanId, principal)
     except ResourceNotFoundError:
         return _api_error(404, "scan_not_found", f"Scan '{scanId}' was not found.")
 
@@ -580,9 +687,9 @@ async def get_dashboard_agents(scanId: str, db: DbSession):
 
 
 @router.get("/scans/{scanId}/dashboard/pivot-chain", response_model=PivotChain)
-async def get_pivot_chain(scanId: str, db: DbSession):
+async def get_pivot_chain(scanId: str, db: DbSession, principal: SessionPrincipal = Depends(_require_session)):
     try:
-        bundle = await _load_bundle(db, scanId)
+        bundle = await _load_owned_bundle(db, scanId, principal)
     except ResourceNotFoundError:
         return _api_error(404, "scan_not_found", f"Scan '{scanId}' was not found.")
 
@@ -623,9 +730,10 @@ async def get_identity_graph(
     includePlatforms: bool = True,
     includeIdentity: bool = True,
     includeTargets: bool = True,
+    principal: SessionPrincipal = Depends(_require_session),
 ):
     try:
-        bundle = await _load_bundle(db, scanId)
+        bundle = await _load_owned_bundle(db, scanId, principal)
     except ResourceNotFoundError:
         return _api_error(404, "scan_not_found", f"Scan '{scanId}' was not found.")
 
@@ -728,8 +836,20 @@ async def get_identity_graph(
 
 
 @router.get("/scans/{scanId}/identity-graph/nodes/{nodeId}", response_model=IdentityGraphNode)
-async def get_identity_graph_node(scanId: str, nodeId: str, db: DbSession):
-    graph = await get_identity_graph(scanId, db)
+async def get_identity_graph_node(
+    scanId: str,
+    nodeId: str,
+    db: DbSession,
+    principal: SessionPrincipal = Depends(_require_session),
+):
+    graph = await get_identity_graph(
+        scanId=scanId,
+        db=db,
+        includePlatforms=True,
+        includeIdentity=True,
+        includeTargets=True,
+        principal=principal,
+    )
     if isinstance(graph, JSONResponse):
         return graph
 
@@ -747,9 +867,10 @@ async def list_engagements(
     statuses: str | None = None,
     cursor: str | None = None,
     limit: int = Query(default=50, ge=1, le=200),
+    principal: SessionPrincipal = Depends(_require_session),
 ):
     try:
-        bundle = await _load_bundle(db, scanId)
+        bundle = await _load_owned_bundle(db, scanId, principal)
     except ResourceNotFoundError:
         return _api_error(404, "scan_not_found", f"Scan '{scanId}' was not found.")
 
@@ -782,9 +903,14 @@ async def list_engagements(
 
 
 @router.get("/scans/{scanId}/war-room/engagements/{engagementId}", response_model=EngagementDetail)
-async def get_engagement(scanId: str, engagementId: str, db: DbSession):
+async def get_engagement(
+    scanId: str,
+    engagementId: str,
+    db: DbSession,
+    principal: SessionPrincipal = Depends(_require_session),
+):
     try:
-        bundle = await _load_bundle(db, scanId)
+        bundle = await _load_owned_bundle(db, scanId, principal)
     except ResourceNotFoundError:
         return _api_error(404, "scan_not_found", f"Scan '{scanId}' was not found.")
 
@@ -823,8 +949,9 @@ async def list_engagement_messages(
     db: DbSession,
     cursor: str | None = None,
     limit: int = Query(default=50, ge=1, le=200),
+    principal: SessionPrincipal = Depends(_require_session),
 ):
-    detail = await get_engagement(scanId, engagementId, db)
+    detail = await get_engagement(scanId=scanId, engagementId=engagementId, db=db, principal=principal)
     if isinstance(detail, JSONResponse):
         return detail
 
@@ -847,7 +974,13 @@ async def create_engagement_message(
     engagementId: str,
     payload: CreateMessageRequest,
     db: DbSession,
+    principal: SessionPrincipal = Depends(_require_session),
 ):
+    try:
+        await _load_owned_bundle(db, scanId, principal)
+    except ResourceNotFoundError:
+        return _api_error(404, "scan_not_found", f"Scan '{scanId}' was not found.")
+
     content = payload.content.strip()
     if not content:
         return _api_error(400, "invalid_message", "Message content cannot be empty.")
@@ -1070,7 +1203,13 @@ async def escalate_engagement(
     engagementId: str,
     payload: EscalateEngagementRequest,
     db: DbSession,
+    principal: SessionPrincipal = Depends(_require_session),
 ):
+    try:
+        await _load_owned_bundle(db, scanId, principal)
+    except ResourceNotFoundError:
+        return _api_error(404, "scan_not_found", f"Scan '{scanId}' was not found.")
+
     status = _escalation_status(payload.reasonCode)
 
     if db is None:

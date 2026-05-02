@@ -40,12 +40,20 @@ class CreateSessionClient(BaseModel):
 
 
 class CreateSessionRequest(BaseModel):
-    client: CreateSessionClient
+    idToken: str
+    client: CreateSessionClient | None = None
 
 
 class CreateSessionResponse(BaseModel):
     sessionId: str
     expiresAt: datetime
+    email: str
+    googleSub: str
+
+
+class GoogleAuthConfigResponse(BaseModel):
+    configured: bool
+    clientId: str
 
 
 class SeedInput(BaseModel):

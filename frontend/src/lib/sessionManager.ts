@@ -1,65 +1,132 @@
-/**
- * Manages anonymous session lifecycle for API requests.
- * Session creation is idempotent and shared across concurrent callers.
- */
-
 import apiClient from "./apiClient";
-import type { components, operations } from "../types/api.generated";
 
-const SESSION_STORAGE_KEY = "dr_session_id";
+const SESSION_ID_STORAGE_KEY = "dr_session_id";
+const SESSION_EMAIL_STORAGE_KEY = "dr_session_email";
+const SESSION_GOOGLE_SUB_STORAGE_KEY = "dr_session_google_sub";
+const SESSION_EXPIRY_STORAGE_KEY = "dr_session_expires_at";
 
-type CreateSessionRequest = operations["createSession"]["requestBody"]["content"]["application/json"];
-type CreateSessionResponse = components["schemas"]["CreateSessionResponse"];
+export type AuthSession = {
+  sessionId: string;
+  email: string;
+  googleSub: string;
+  expiresAt: string;
+};
 
-let sessionInitializationPromise: Promise<string> | null = null;
+type CreateSessionResponse = {
+  sessionId: string;
+  email: string;
+  googleSub: string;
+  expiresAt: string;
+};
 
-export function getSessionId(): string | null {
-  if (typeof window === "undefined") {
+function hasWindow(): boolean {
+  return typeof window !== "undefined";
+}
+
+function normalizeEmail(value: string | null): string {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase();
+}
+
+function readSessionFromStorage(): AuthSession | null {
+  if (!hasWindow()) {
     return null;
   }
-  return sessionStorage.getItem(SESSION_STORAGE_KEY);
+
+  const sessionId = sessionStorage.getItem(SESSION_ID_STORAGE_KEY);
+  const email = sessionStorage.getItem(SESSION_EMAIL_STORAGE_KEY);
+  const googleSub = sessionStorage.getItem(SESSION_GOOGLE_SUB_STORAGE_KEY);
+  const expiresAt = sessionStorage.getItem(SESSION_EXPIRY_STORAGE_KEY);
+
+  if (!sessionId || !email || !googleSub || !expiresAt) {
+    return null;
+  }
+
+  return {
+    sessionId,
+    email: normalizeEmail(email),
+    googleSub,
+    expiresAt,
+  };
+}
+
+function persistSession(session: AuthSession): void {
+  if (!hasWindow()) {
+    return;
+  }
+
+  sessionStorage.setItem(SESSION_ID_STORAGE_KEY, session.sessionId);
+  sessionStorage.setItem(SESSION_EMAIL_STORAGE_KEY, normalizeEmail(session.email));
+  sessionStorage.setItem(SESSION_GOOGLE_SUB_STORAGE_KEY, session.googleSub);
+  sessionStorage.setItem(SESSION_EXPIRY_STORAGE_KEY, session.expiresAt);
+}
+
+function isExpired(expiresAt: string): boolean {
+  const expiry = new Date(expiresAt).getTime();
+  if (!Number.isFinite(expiry)) {
+    return true;
+  }
+  return Date.now() >= expiry;
 }
 
 export function clearSession(): void {
-  if (typeof window === "undefined") {
+  if (!hasWindow()) {
     return;
   }
-  sessionStorage.removeItem(SESSION_STORAGE_KEY);
+  sessionStorage.removeItem(SESSION_ID_STORAGE_KEY);
+  sessionStorage.removeItem(SESSION_EMAIL_STORAGE_KEY);
+  sessionStorage.removeItem(SESSION_GOOGLE_SUB_STORAGE_KEY);
+  sessionStorage.removeItem(SESSION_EXPIRY_STORAGE_KEY);
 }
 
-export async function initializeSession(): Promise<string> {
-  const existing = getSessionId();
-  if (existing) {
-    return existing;
+export function getAuthSession(): AuthSession | null {
+  const session = readSessionFromStorage();
+  if (!session) {
+    return null;
+  }
+  if (isExpired(session.expiresAt)) {
+    clearSession();
+    return null;
+  }
+  return session;
+}
+
+export function getSessionId(): string | null {
+  return getAuthSession()?.sessionId ?? null;
+}
+
+export function getAuthenticatedEmail(): string | null {
+  return getAuthSession()?.email ?? null;
+}
+
+export function isAuthenticated(): boolean {
+  return getAuthSession() !== null;
+}
+
+export async function createGoogleSession(idToken: string): Promise<AuthSession> {
+  const trimmedToken = idToken.trim();
+  if (!trimmedToken) {
+    throw new Error("Missing Google credential.");
   }
 
-  if (sessionInitializationPromise) {
-    return sessionInitializationPromise;
-  }
+  const payload = {
+    idToken: trimmedToken,
+    client: {
+      appVersion: "web-1.0.0",
+      platform: "browser",
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      locale: navigator.language,
+    },
+  };
 
-  sessionInitializationPromise = (async () => {
-    const payload: CreateSessionRequest = {
-      client: {
-        appVersion: "web-1.0.0",
-        platform: "browser",
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        locale: navigator.language,
-      },
-    };
-
-    const response = await apiClient.post<CreateSessionResponse>("/v1/sessions", payload);
-    const sessionId = response.data.sessionId;
-
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem(SESSION_STORAGE_KEY, sessionId);
-    }
-
-    return sessionId;
-  })();
-
-  try {
-    return await sessionInitializationPromise;
-  } finally {
-    sessionInitializationPromise = null;
-  }
+  const response = await apiClient.post<CreateSessionResponse>("/v1/sessions", payload);
+  const session: AuthSession = {
+    sessionId: response.data.sessionId,
+    email: normalizeEmail(response.data.email),
+    googleSub: response.data.googleSub,
+    expiresAt: response.data.expiresAt,
+  };
+  persistSession(session);
+  return session;
 }

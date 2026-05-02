@@ -5,6 +5,7 @@ import CommandCenter from "./pages/CommandCenter";
 import IdentityGraph from "./pages/IdentityGraph";
 import WarRoom from "./pages/WarRoom";
 import ShieldLogs from "./pages/ShieldLogs";
+import AccessMirror from "./pages/AccessMirror";
 
 export const router = createBrowserRouter([
   {
@@ -20,6 +21,10 @@ export const router = createBrowserRouter([
     Component: CommandCenter,
   },
   {
+    path: "/dashboard",
+    Component: CommandCenter,
+  },
+  {
     path: "/identity-graph",
     Component: IdentityGraph,
   },
@@ -30,5 +35,9 @@ export const router = createBrowserRouter([
   {
     path: "/shield-logs",
     Component: ShieldLogs,
+  },
+  {
+    path: "/access-mirror",
+    Component: AccessMirror,
   },
 ]);

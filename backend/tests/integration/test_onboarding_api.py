@@ -1,7 +1,8 @@
-﻿import asyncio
+import asyncio
 
 from fastapi.testclient import TestClient
 
+from datareaper.comms.oauth import GoogleIdentity
 from datareaper.db.repositories.scan_repo import ScanRepository
 from datareaper.db.session import SessionLocal
 from datareaper.main import app
@@ -21,6 +22,28 @@ def _clear_active_scans() -> None:
             await repo.stop_scan(None, scan_id, reason="test_setup_cleanup")
 
     asyncio.run(_run())
+
+
+def _create_google_session(client: TestClient, monkeypatch, email: str) -> str:
+    monkeypatch.setattr(
+        "datareaper.api.routes.v1_contract.verify_google_id_token",
+        lambda *_args, **_kwargs: GoogleIdentity(email=email, subject="google-sub-test"),
+    )
+
+    response = client.post(
+        "/v1/sessions",
+        json={
+            "idToken": "fake-google-id-token",
+            "client": {
+                "appVersion": "test-suite",
+                "platform": "browser",
+                "timezone": "UTC",
+                "locale": "en-US",
+            },
+        },
+    )
+    assert response.status_code == 201
+    return response.json()["sessionId"]
 
 
 def test_onboarding_api() -> None:
@@ -47,15 +70,17 @@ def test_onboarding_api() -> None:
         assert stop_response.status_code == 200
 
 
-def test_v1_create_scan_api() -> None:
+def test_v1_create_scan_api(monkeypatch) -> None:
     _clear_active_scans()
     with TestClient(app) as client:
+        session_id = _create_google_session(client, monkeypatch, "user@email.com")
         response = client.post(
             "/v1/scans",
             json={
                 "seed": {"type": "email", "value": "user@email.com"},
                 "jurisdictionHint": "AUTO",
             },
+            headers={"X-Session-Id": session_id},
         )
         assert response.status_code == 202
         payload = response.json()
@@ -65,6 +90,7 @@ def test_v1_create_scan_api() -> None:
         stop_response = client.post(
             f"/v1/scans/{payload['scanId']}/actions/stop",
             json={"reason": "test_cleanup"},
+            headers={"X-Session-Id": session_id},
         )
         assert stop_response.status_code == 200
 
@@ -95,15 +121,17 @@ def test_api_stop_scan() -> None:
         assert status_response.json().get("status") == "cancelled"
 
 
-def test_v1_stop_scan() -> None:
+def test_v1_stop_scan(monkeypatch) -> None:
     _clear_active_scans()
     with TestClient(app) as client:
+        session_id = _create_google_session(client, monkeypatch, "stop-v1@email.com")
         created = client.post(
             "/v1/scans",
             json={
                 "seed": {"type": "email", "value": "stop-v1@email.com"},
                 "jurisdictionHint": "AUTO",
             },
+            headers={"X-Session-Id": session_id},
         )
         assert created.status_code == 202
         scan_id = created.json()["scanId"]
@@ -111,8 +139,66 @@ def test_v1_stop_scan() -> None:
         stopped = client.post(
             f"/v1/scans/{scan_id}/actions/stop",
             json={"reason": "integration_test_v1"},
+            headers={"X-Session-Id": session_id},
         )
         assert stopped.status_code == 200
         payload = stopped.json()
         assert payload.get("scanId") == scan_id
         assert payload.get("status") == "cancelled"
+
+
+def test_v1_rejects_seed_email_mismatch(monkeypatch) -> None:
+    _clear_active_scans()
+    with TestClient(app) as client:
+        session_id = _create_google_session(client, monkeypatch, "owner@email.com")
+        created = client.post(
+            "/v1/scans",
+            json={
+                "seed": {"type": "email", "value": "other@email.com"},
+                "jurisdictionHint": "AUTO",
+            },
+            headers={"X-Session-Id": session_id},
+        )
+
+        assert created.status_code == 403
+        payload = created.json()
+        assert payload.get("code") == "seed_mismatch"
+
+
+def test_v1_scan_conflict_returns_active_scan_id(monkeypatch) -> None:
+    _clear_active_scans()
+    with TestClient(app) as client:
+        session_id = _create_google_session(client, monkeypatch, "conflict@email.com")
+        created = client.post(
+            "/v1/scans",
+            json={
+                "seed": {"type": "email", "value": "conflict@email.com"},
+                "jurisdictionHint": "AUTO",
+            },
+            headers={"X-Session-Id": session_id},
+        )
+        assert created.status_code == 202
+        active_scan_id = created.json().get("scanId")
+        assert active_scan_id
+
+        conflict = client.post(
+            "/v1/scans",
+            json={
+                "seed": {"type": "email", "value": "conflict@email.com"},
+                "jurisdictionHint": "AUTO",
+            },
+            headers={"X-Session-Id": session_id},
+        )
+        assert conflict.status_code == 409
+        payload = conflict.json()
+        assert payload.get("code") == "scan_in_progress"
+        details = payload.get("details") or []
+        assert isinstance(details, list)
+        assert details and details[0].get("scanId") == active_scan_id
+
+        stopped = client.post(
+            f"/v1/scans/{active_scan_id}/actions/stop",
+            json={"reason": "test_cleanup_conflict"},
+            headers={"X-Session-Id": session_id},
+        )
+        assert stopped.status_code == 200
