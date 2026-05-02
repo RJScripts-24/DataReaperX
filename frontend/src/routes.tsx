@@ -5,6 +5,7 @@ import CommandCenter from "./pages/CommandCenter";
 import IdentityGraph from "./pages/IdentityGraph";
 import WarRoom from "./pages/WarRoom";
 import ShieldLogs from "./pages/ShieldLogs";
+import ShadowBrowser from "./pages/ShadowBrowser";
 import AccessMirror from "./pages/AccessMirror";
 
 export const router = createBrowserRouter([
@@ -35,6 +36,10 @@ export const router = createBrowserRouter([
   {
     path: "/shield-logs",
     Component: ShieldLogs,
+  },
+  {
+    path: "/shadow-browser",
+    Component: ShadowBrowser,
   },
   {
     path: "/access-mirror",

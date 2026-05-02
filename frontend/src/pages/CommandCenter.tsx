@@ -10,12 +10,13 @@ import { PressureText } from "../components/PressureText";
 import { AnimatedDataReaperLogo } from "../components/AnimatedDataReaperLogo";
 import { ApiClientError } from "../lib/apiClient";
 import apiClient from "../lib/apiClient";
-import { stopScan } from "../lib/api";
+import { createScan, stopScan } from "../lib/api";
 import { ShieldButton } from "../components/ShieldButton";
 import { useScanContext, useRequireScan } from "../lib/scanContext";
 import { type RealtimeConnectionStatus } from "../lib/wsClient";
 import { useDashboard } from "../lib/useDashboard";
 import { useEngagementsQuery, useScanStatusQuery } from "../lib/hooks";
+import { getAuthSession, isScanPending, setScanPending } from "../lib/sessionManager";
 
 const COLORS = {
   bg: "#f5f3ef",
@@ -340,10 +341,25 @@ function ProgressPill({ percent, status }: { percent: number; status: string }) 
   );
 }
 
+function extractConflictScanId(error: ApiClientError): string | null {
+  if (!Array.isArray(error.details)) {
+    return null;
+  }
+  for (const detail of error.details) {
+    const maybeId = typeof detail?.scanId === "string" ? detail.scanId.trim() : "";
+    if (maybeId) {
+      return maybeId;
+    }
+  }
+  return null;
+}
+
 export default function CommandCenter() {
   const navigate = useNavigate();
   const { setActiveScan } = useScanContext();
   const scanId = useRequireScan();
+  const session = getAuthSession();
+  const scanPending = isScanPending();
   const scanQuery = useScanStatusQuery(scanId);
   const engagementsQuery = useEngagementsQuery(scanId);
 
@@ -354,8 +370,54 @@ export default function CommandCenter() {
   const [isStartingNewScan, setIsStartingNewScan] = useState(false);
   const [isStopped, setIsStopped] = useState(false);
   const [displayProgress, setDisplayProgress] = useState(0);
+  const [isInitializingScan, setIsInitializingScan] = useState(false);
   const { state, connectionStatus, hasError, refetch } = useDashboard(scanId);
   const realtimeStatus = connectionStatus;
+
+  useEffect(() => {
+    if (!session || scanId || !scanPending || isInitializingScan) {
+      return;
+    }
+
+    const normalizedEmail = String(session.email || "").trim().toLowerCase();
+    if (!normalizedEmail) {
+      setScanPending(false);
+      navigate("/onboarding", { replace: true });
+      return;
+    }
+
+    setIsInitializingScan(true);
+    createScan({
+      seed: { type: "email", value: normalizedEmail },
+      jurisdictionHint: "AUTO",
+    })
+      .then((response) => {
+        setActiveScan(response.scanId);
+        setScanPending(false);
+      })
+      .catch((error) => {
+        if (error instanceof ApiClientError && error.code === "scan_in_progress") {
+          const recoveredScanId = extractConflictScanId(error);
+          if (recoveredScanId) {
+            setActiveScan(recoveredScanId);
+            setScanPending(false);
+            return;
+          }
+        }
+        setScanPending(false);
+        const message =
+          error instanceof ApiClientError
+            ? error.message
+            : error instanceof Error
+              ? error.message
+              : "Failed to start scan.";
+        toast.error(message);
+        navigate("/onboarding", { replace: true });
+      })
+      .finally(() => {
+        setIsInitializingScan(false);
+      });
+  }, [isInitializingScan, navigate, scanId, scanPending, session, setActiveScan]);
 
   useEffect(() => {
     if (!scanId) {
@@ -492,6 +554,46 @@ export default function CommandCenter() {
     };
   }, [backendProgress, displayProgress]);
 
+  const hoveredRadarDot = useMemo(
+    () => radarTargets.find((target) => target.id === hoveredRadarDotId) ?? null,
+    [hoveredRadarDotId, radarTargets]
+  );
+
+  useEffect(() => {
+    if (!hoveredRadarDotId) {
+      return;
+    }
+    const stillExists = radarTargets.some((target) => target.id === hoveredRadarDotId);
+    if (!stillExists) {
+      setHoveredRadarDotId(null);
+    }
+  }, [hoveredRadarDotId, radarTargets]);
+
+  useEffect(() => {
+    if (!isRadarExpanded) {
+      return;
+    }
+    if (!hoveredRadarDot && radarTargets.length > 0) {
+      setHoveredRadarDotId(radarTargets[0]?.id ?? null);
+    }
+  }, [hoveredRadarDot, isRadarExpanded, radarTargets]);
+
+  if (!scanId && scanPending) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: COLORS.bg }}>
+        <div className="hand-drawn-card px-8 py-6" style={{ backgroundColor: "#fdfbf7" }}>
+          <PressureText
+            as="p"
+            className="paper-text"
+            style={{ fontFamily: "'Patrick Hand', cursive", fontSize: 18 }}
+          >
+            Initializing your scan... This usually takes a few seconds.
+          </PressureText>
+        </div>
+      </div>
+    );
+  }
+
   if (!scanId) {
     return null;
   }
@@ -528,29 +630,6 @@ export default function CommandCenter() {
     { email: 0, phone: 0, location: 0 } as Record<"email" | "phone" | "location", number>
   );
 
-  const hoveredRadarDot = useMemo(
-    () => radarTargets.find((target) => target.id === hoveredRadarDotId) ?? null,
-    [hoveredRadarDotId, radarTargets]
-  );
-
-  useEffect(() => {
-    if (!hoveredRadarDotId) {
-      return;
-    }
-    const stillExists = radarTargets.some((target) => target.id === hoveredRadarDotId);
-    if (!stillExists) {
-      setHoveredRadarDotId(null);
-    }
-  }, [hoveredRadarDotId, radarTargets]);
-
-  useEffect(() => {
-    if (!isRadarExpanded) {
-      return;
-    }
-    if (!hoveredRadarDot && radarTargets.length > 0) {
-      setHoveredRadarDotId(radarTargets[0]?.id ?? null);
-    }
-  }, [hoveredRadarDot, isRadarExpanded, radarTargets]);
 
   const renderRadar = (expanded: boolean) => (
     <div className={`relative w-full aspect-square mx-auto ${expanded ? "max-w-[700px]" : "max-w-[460px]"}`}>
@@ -780,6 +859,14 @@ export default function CommandCenter() {
               data-reaper-phrases="Reviewing shield intel.||Let's inspect the threat trail."
             >
               Shield Logs
+            </button>
+            <button
+              onClick={() => navigate("/shadow-browser")}
+              className="text-xl pencil-text transition-colors opacity-60 hover:opacity-100"
+              data-reaper-expression="thinking"
+              data-reaper-phrases="Fake browsing noise.||What brokers think you clicked."
+            >
+              Shadow Browser
             </button>
             <button
               onClick={() => navigate("/access-mirror")}

@@ -69,20 +69,82 @@
     }
   });
 
-  // Allow the dashboard to request extension logs
+  // Dashboard ↔ extension: shield logs + shadow browser (postMessage bridge)
   window.addEventListener("message", (event) => {
     if (event.origin !== window.location.origin) return;
-    if (event.data?.type !== "DR_REQUEST_SHIELD_LOGS") return;
+    const type = event.data?.type;
+    if (!type) return;
 
-    chrome.runtime.sendMessage({ type: "DR_GET_LOGS" }, (response) => {
-      if (chrome.runtime.lastError) {
-        console.warn("[DataReaper] Shield log request failed:", chrome.runtime.lastError.message);
-        return;
-      }
-      window.postMessage(
-        { type: "DR_SHIELD_LOGS", payload: response },
-        window.location.origin
+    if (type === "DR_REQUEST_SHIELD_LOGS") {
+      chrome.runtime.sendMessage({ type: "DR_GET_LOGS" }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.warn("[DataReaper] Shield log request failed:", chrome.runtime.lastError.message);
+          return;
+        }
+        window.postMessage(
+          { type: "DR_SHIELD_LOGS", payload: response },
+          window.location.origin
+        );
+      });
+      return;
+    }
+
+    if (type === "DR_GET_SHADOW_PERSONA") {
+      chrome.runtime.sendMessage(
+        { type: "DR_GET_SHADOW_PERSONA", forceRandom: Boolean(event.data?.forceRandom) },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            console.warn("[DataReaper] Shadow persona request failed:", chrome.runtime.lastError.message);
+            return;
+          }
+          window.postMessage(
+            { type: "DR_SHADOW_PERSONA", persona: response?.persona },
+            window.location.origin
+          );
+        }
       );
-    });
+      return;
+    }
+
+    if (type === "DR_GET_SHADOW_LOG") {
+      chrome.runtime.sendMessage({ type: "DR_GET_SHADOW_LOG" }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.warn("[DataReaper] Shadow log request failed:", chrome.runtime.lastError.message);
+          return;
+        }
+        window.postMessage(
+          { type: "DR_SHADOW_LOG", log: response?.log ?? [] },
+          window.location.origin
+        );
+      });
+      return;
+    }
+
+    if (type === "DR_GET_SHADOW_BROWSER_ENABLED") {
+      chrome.runtime.sendMessage({ type: "DR_GET_SHADOW_BROWSER_ENABLED" }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.warn("[DataReaper] Shadow enabled state failed:", chrome.runtime.lastError.message);
+          return;
+        }
+        window.postMessage(
+          { type: "DR_SHADOW_BROWSER_ENABLED", enabled: response?.enabled !== false },
+          window.location.origin
+        );
+      });
+      return;
+    }
+
+    if (type === "DR_TOGGLE_SHADOW_BROWSER") {
+      const enabled = Boolean(event.data?.enabled);
+      chrome.runtime.sendMessage({ type: "DR_TOGGLE_SHADOW_BROWSER", enabled }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.warn("[DataReaper] Shadow toggle failed:", chrome.runtime.lastError.message);
+          return;
+        }
+        void response;
+      });
+      return;
+    }
+
   });
 })();

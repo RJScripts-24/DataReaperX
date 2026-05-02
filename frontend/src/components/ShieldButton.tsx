@@ -164,7 +164,7 @@ function OnboardingModal({
 // Main ShieldButton component
 // --------------------------------------------------------------------------
 export function ShieldButton() {
-  const { shieldState, deployShield } = useShield();
+  const { shieldState, deployShield, redeployShield, refreshShieldPack } = useShield();
   const [modalOpen, setModalOpen] = useState(false);
 
   const handleDeploy = async () => {
@@ -181,6 +181,37 @@ export function ShieldButton() {
     setModalOpen(true);
   };
 
+  const handleRedeploy = async () => {
+    await redeployShield();
+    confetti({
+      particleCount: 40,
+      spread: 55,
+      origin: { y: 0.65 },
+      colors: ["#4a6fa5", "#4f7d5c", "#d17a22"],
+    });
+    toast.success("Latest shield pack downloading — reload the extension in chrome://extensions after unzipping.");
+    downloadShieldExtension();
+  };
+
+  const handlePendingRedeploy = async () => {
+    await deployShield();
+    toast.success("Fresh token and latest pack — download starting...");
+    downloadShieldExtension();
+  };
+
+  /** Fresh token + zip without pending-install state or the onboarding modal. */
+  const handleRedeployWithoutModal = async () => {
+    await refreshShieldPack();
+    confetti({
+      particleCount: 35,
+      spread: 50,
+      origin: { y: 0.65 },
+      colors: ["#4a6fa5", "#4f7d5c"],
+    });
+    toast.success("Latest shield pack downloading…");
+    downloadShieldExtension();
+  };
+
   // Force-open modal when state transitions to pending_install
   if (shieldState === "pending_install" && !modalOpen) {
     // defer to next tick to avoid render conflict
@@ -189,35 +220,54 @@ export function ShieldButton() {
 
   if (shieldState === "active") {
     return (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 8,
-          backgroundColor: "rgba(79,125,92,0.12)",
-          border: "1.5px solid #4f7d5c",
-          borderRadius: 999,
-          padding: "4px 14px",
-          fontFamily: "'Patrick Hand', cursive",
-          color: "#4f7d5c",
-          fontSize: 13,
-          boxShadow: "0 0 10px rgba(79,125,92,0.35)",
-        }}
-      >
-        <span
+      <div style={{ display: "inline-flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
           style={{
-            width: 8,
-            height: 8,
-            borderRadius: "50%",
-            backgroundColor: "#4f7d5c",
-            display: "inline-block",
-            animation: "drPulse 1.5s infinite",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            backgroundColor: "rgba(79,125,92,0.12)",
+            border: "1.5px solid #4f7d5c",
+            borderRadius: 999,
+            padding: "4px 14px",
+            fontFamily: "'Patrick Hand', cursive",
+            color: "#4f7d5c",
+            fontSize: 13,
+            boxShadow: "0 0 10px rgba(79,125,92,0.35)",
           }}
-        />
-        Shield Active · Monitoring DOM
-      </motion.div>
+        >
+          <span
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              backgroundColor: "#4f7d5c",
+              display: "inline-block",
+              animation: "drPulse 1.5s infinite",
+            }}
+          />
+          Shield Active · Monitoring DOM
+        </motion.div>
+        <motion.button
+          type="button"
+          className="hand-drawn-button"
+          onClick={() => void handleRedeploy()}
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.96 }}
+          style={{
+            fontFamily: "'Patrick Hand', cursive",
+            fontSize: 13,
+            padding: "6px 14px",
+            backgroundColor: "#fff",
+            color: "#2a4a6f",
+            borderColor: "#4a6fa5",
+          }}
+        >
+          🔄 Redeploy
+        </motion.button>
+      </div>
     );
   }
 
@@ -248,13 +298,32 @@ export function ShieldButton() {
   if (shieldState === "pending_install") {
     return (
       <>
-        <button
-          className="hand-drawn-button"
-          disabled
-          style={{ opacity: 0.6 }}
-        >
-          ⏳ Awaiting Extension Install
-        </button>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <button
+            className="hand-drawn-button"
+            disabled
+            style={{ opacity: 0.6 }}
+          >
+            ⏳ Awaiting Extension Install
+          </button>
+          <motion.button
+            type="button"
+            className="hand-drawn-button"
+            onClick={() => void handlePendingRedeploy()}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.96 }}
+            style={{
+              fontFamily: "'Patrick Hand', cursive",
+              fontSize: 13,
+              padding: "6px 14px",
+              backgroundColor: "#fff",
+              color: "#2a4a6f",
+              borderColor: "#4a6fa5",
+            }}
+          >
+            🔄 Redeploy
+          </motion.button>
+        </div>
 
         <OnboardingModal
           open={modalOpen}
@@ -264,12 +333,12 @@ export function ShieldButton() {
     );
   }
 
-  // "idle" or "error" — show deploy button
+  // "idle" or "error" — Deploy opens the install modal; Redeploy only refreshes token + zip download
   return (
-    <>
+    <div style={{ display: "inline-flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
       <motion.button
         className="hand-drawn-button"
-        onClick={handleDeploy}
+        onClick={() => void handleDeploy()}
         whileHover={{ scale: 1.03 }}
         whileTap={{ scale: 0.96 }}
         style={{
@@ -283,6 +352,26 @@ export function ShieldButton() {
       >
         ⚔️ Deploy Active Shield
       </motion.button>
-    </>
+      <motion.button
+        type="button"
+        className="hand-drawn-button"
+        onClick={() => void handleRedeployWithoutModal()}
+        whileHover={{ scale: 1.03 }}
+        whileTap={{ scale: 0.96 }}
+        style={{
+          fontFamily: "'Patrick Hand', cursive",
+          fontSize: 14,
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+          backgroundColor: "#fff",
+          color: "#2a4a6f",
+          borderColor: "#4a6fa5",
+        }}
+        title="Fresh token + latest tripwire zip without the install pop-up. Reload unpacked in chrome://extensions."
+      >
+        🔄 Redeploy
+      </motion.button>
+    </div>
   );
 }

@@ -2,8 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { vi } from "vitest";
 
 import Onboarding from "./Onboarding";
-import { createScan } from "../lib/api";
-import apiClient, { ApiClientError } from "../lib/apiClient";
+import apiClient from "../lib/apiClient";
 import { createGoogleSession } from "../lib/sessionManager";
 
 const mockNavigate = vi.fn();
@@ -26,10 +25,6 @@ vi.mock("sonner", () => ({
   toast: {
     success: (...args: unknown[]) => mockToastSuccess(...args),
   },
-}));
-
-vi.mock("../lib/api", () => ({
-  createScan: vi.fn(),
 }));
 
 vi.mock("../lib/apiClient", () => {
@@ -57,6 +52,7 @@ vi.mock("../lib/apiClient", () => {
 vi.mock("../lib/sessionManager", () => ({
   createGoogleSession: vi.fn(),
   getAuthSession: () => mockSession,
+  setScanPending: vi.fn(),
 }));
 
 vi.mock("../lib/scanContext", () => ({
@@ -100,25 +96,13 @@ describe("Onboarding", () => {
     vi.unstubAllGlobals();
   });
 
-  it("shows a single Google login button and redirects to dashboard after sign-in", async () => {
+  it("shows a single Google login button and redirects to command center after sign-in", async () => {
     vi.mocked(createGoogleSession).mockResolvedValueOnce({
       sessionId: "ses_123",
       email: "user@email.com",
       googleSub: "sub_123",
       expiresAt: new Date(Date.now() + 60_000).toISOString(),
     });
-    vi.mocked(createScan).mockResolvedValueOnce({
-      scanId: "scan_123",
-      status: "discovering",
-      startedAt: new Date().toISOString(),
-      routeHints: {
-        commandCenter: "/dashboard",
-        identityGraph: "/identity-graph",
-        warRoom: "/war-room",
-      },
-      estimatedDuration: 180,
-    });
-
     render(<Onboarding />);
 
     const loginTarget = await screen.findByLabelText(/login with google/i);
@@ -131,12 +115,7 @@ describe("Onboarding", () => {
     await waitFor(
       () => {
         expect(createGoogleSession).toHaveBeenCalledWith("google-token");
-        expect(createScan).toHaveBeenCalledWith({
-          seed: { type: "email", value: "user@email.com" },
-          jurisdictionHint: "AUTO",
-        });
-        expect(mockSetActiveScan).toHaveBeenCalledWith("scan_123");
-        expect(mockNavigate).toHaveBeenCalledWith("/dashboard", { replace: true });
+        expect(mockNavigate).toHaveBeenCalledWith("/command-center", { replace: true });
         expect(mockToastSuccess).toHaveBeenCalled();
       },
       { timeout: 3000 },
@@ -150,26 +129,17 @@ describe("Onboarding", () => {
     render(<Onboarding />);
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith("/dashboard", { replace: true });
+      expect(mockNavigate).toHaveBeenCalledWith("/command-center", { replace: true });
     });
   });
 
-  it("recovers active scan id from 409 conflict and routes to dashboard", async () => {
+  it("routes authenticated users to command center", async () => {
     mockSession = { email: "user@email.com" };
-    vi.mocked(createScan).mockRejectedValueOnce(
-      new ApiClientError({
-        code: "scan_in_progress",
-        message: "A scan is already in progress for this account.",
-        details: [{ scanId: "scan_conflict_1" }],
-        status: 409,
-      }),
-    );
 
     render(<Onboarding />);
 
     await waitFor(() => {
-      expect(mockSetActiveScan).toHaveBeenCalledWith("scan_conflict_1");
-      expect(mockNavigate).toHaveBeenCalledWith("/dashboard", { replace: true });
+      expect(mockNavigate).toHaveBeenCalledWith("/command-center", { replace: true });
     });
   });
 });

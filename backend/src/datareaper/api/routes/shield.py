@@ -8,7 +8,11 @@ from fastapi import APIRouter, Depends, Header, HTTPException, status
 from fastapi.responses import FileResponse
 from redis.asyncio import Redis
 
+from datareaper.core.logging import get_logger
+
 from datareaper.core.config import get_settings as _get_settings
+
+logger = get_logger(__name__)
 
 router = APIRouter()
 

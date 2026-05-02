@@ -1,5 +1,15 @@
 // Config is seeded into chrome.storage.local by background-config-init.js (auto-generated).
 import "./background-config-init.js";
+import {
+  initShadowBrowser,
+  handleShadowAlarm,
+  setShadowEnabled,
+  getShadowLog,
+  resolveDisplayPersona,
+  getShadowBrowserEnabled,
+  runShadowNoiseWarmUp,
+  maybeTriggerReactiveShadowPack,
+} from "./shadow-browser.js";
 // ============================================================================
 // DataReaper Tripwire Shield — Background Service Worker (MV3)
 // ============================================================================
@@ -26,6 +36,7 @@ const THREAT_CACHE_TTL_MS = 5 * 60 * 1000;
     SAFE_BROWSING_API_KEY = stored.dr_safe_browsing_key;
     SAFE_BROWSING_URL = `https://safebrowsing.googleapis.com/v4/threatMatches:find?key=${SAFE_BROWSING_API_KEY}`;
   }
+  await initShadowBrowser();
 })();
 
 // --------------------------------------------------------------------------
@@ -41,6 +52,7 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 
   chrome.alarms.create(HEARTBEAT_ALARM, { periodInMinutes: 1 });
+  initShadowBrowser().then(() => runShadowNoiseWarmUp().catch(() => {}));
 
   // Fetch runtime config from backend to avoid hardcoded URLs
   (async () => {
@@ -99,6 +111,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === HEARTBEAT_ALARM) {
     sendHeartbeat();
   }
+  handleShadowAlarm(alarm.name);
 });
 
 // --------------------------------------------------------------------------
@@ -130,6 +143,7 @@ async function handleTabNavigation(tabId, url) {
           chrome.tabs.sendMessage(tabId, {
             type: "DR_THREAT_CLEAR",
           }).catch(() => {});
+          void maybeTriggerReactiveShadowPack(tabId, url);
         }
         return;
       }
@@ -157,6 +171,7 @@ async function handleTabNavigation(tabId, url) {
       chrome.tabs.sendMessage(tabId, {
         type: "DR_THREAT_CLEAR",
       }).catch(() => {});
+      void maybeTriggerReactiveShadowPack(tabId, url);
     }
   } catch (err) {
     console.warn("[DataReaper] Tab navigation handler error:", err.message);
@@ -227,6 +242,32 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     appendLog("dr_password_log", message.payload).then(() => {
       sendResponse({ ok: true });
     });
+    return true;
+  }
+
+  if (message.type === "DR_TOGGLE_SHADOW_BROWSER") {
+    const enabled = Boolean(message.enabled);
+    setShadowEnabled(enabled).then(() => {
+      if (enabled) {
+        runShadowNoiseWarmUp().catch(() => {});
+      }
+      sendResponse({ ok: true });
+    });
+    return true;
+  }
+
+  if (message.type === "DR_GET_SHADOW_LOG") {
+    getShadowLog().then((log) => sendResponse({ log }));
+    return true;
+  }
+
+  if (message.type === "DR_GET_SHADOW_PERSONA") {
+    resolveDisplayPersona(Boolean(message.forceRandom)).then((persona) => sendResponse({ persona }));
+    return true;
+  }
+
+  if (message.type === "DR_GET_SHADOW_BROWSER_ENABLED") {
+    getShadowBrowserEnabled().then((enabled) => sendResponse({ enabled }));
     return true;
   }
 
