@@ -1,4 +1,5 @@
-﻿from datareaper.db.models.activity_event import ActivityEvent
+from datareaper.db.models.access_mirror_report import AccessMirrorReport, GoogleOAuthConnection
+from datareaper.db.models.activity_event import ActivityEvent
 from datareaper.db.models.agent_run import AgentRun
 from datareaper.db.models.attachment import Attachment
 from datareaper.db.models.audit_log import AuditLog

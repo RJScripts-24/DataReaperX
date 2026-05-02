@@ -1,0 +1,16 @@
+Google Takeout-style mock archive for Access Mirror testing (reference-sites edition).
+
+Archive file:
+google-takeout-mock-access-mirror-wiki.zip
+
+Top-level structure inside zip:
+- Takeout/archive_browser.html
+- Takeout/My Activity/.../MyActivity.json
+- Takeout/Google Account/3rd-party apps & services with access to your account/...
+- Takeout/Location History/Records.json
+
+Focus:
+- Uses Wikipedia and similar reference/research sites only.
+- Avoids site overlap with the older mock archive.
+
+Generated: 2026-05-02

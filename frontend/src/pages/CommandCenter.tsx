@@ -552,50 +552,6 @@ export default function CommandCenter() {
     };
   }, [backendProgress, displayProgress]);
 
-  const hoveredRadarDot = useMemo(
-    () => radarTargets.find((target) => target.id === hoveredRadarDotId) ?? null,
-    [hoveredRadarDotId, radarTargets]
-  );
-
-  useEffect(() => {
-    if (!hoveredRadarDotId) {
-      return;
-    }
-    const stillExists = radarTargets.some((target) => target.id === hoveredRadarDotId);
-    if (!stillExists) {
-      setHoveredRadarDotId(null);
-    }
-  }, [hoveredRadarDotId, radarTargets]);
-
-  useEffect(() => {
-    if (!isRadarExpanded) {
-      return;
-    }
-    if (!hoveredRadarDot && radarTargets.length > 0) {
-      setHoveredRadarDotId(radarTargets[0]?.id ?? null);
-    }
-  }, [hoveredRadarDot, isRadarExpanded, radarTargets]);
-
-  if (!scanId && scanPending) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: COLORS.bg }}>
-        <div className="hand-drawn-card px-8 py-6" style={{ backgroundColor: "#fdfbf7" }}>
-          <PressureText
-            as="p"
-            className="paper-text"
-            style={{ fontFamily: "'Patrick Hand', cursive", fontSize: 18 }}
-          >
-            Initializing your scan... This usually takes a few seconds.
-          </PressureText>
-        </div>
-      </div>
-    );
-  }
-
-  if (!scanId) {
-    return null;
-  }
-
   const statusLabel =
     isStopped
       ? "STOPPED"
@@ -828,79 +784,18 @@ export default function CommandCenter() {
     </div>
   );
 
+  if (!scanId) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen relative w-full overflow-x-hidden pb-8" style={{ backgroundColor: COLORS.bg }}>
       <PressureFilter />
       <ConnectionBanner status={realtimeStatus} />
 
-<<<<<<< HEAD
-      <nav
-        className="sticky top-0 z-50 pt-4 pb-3 px-6 md:px-12 lg:px-16 flex items-center justify-between backdrop-blur-sm"
-        style={{ backgroundColor: "rgba(245, 243, 239, 0.85)", borderBottom: "1.5px dashed rgba(0,0,0,0.15)" }}
-      >
-        <div className="max-w-[1600px] w-full mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}> 
-            <AnimatedDataReaperLogo imageStyle={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.15))" }} />
-            <PressureText as="span" className="text-3xl tracking-tight" style={{ fontFamily: "'Dancing Script', cursive", fontWeight: 700 }}>
-              DataReaper
-            </PressureText>
-          </div>
-
-          <div className="hidden md:flex items-center gap-8">
-            <button 
-              className="text-xl pencil-text transition-colors opacity-100 hover:opacity-70"
-              data-reaper-expression="happy"
-              data-reaper-phrases="Dashboard view. I see everything from up here.||The operations center is humming with activity."
-            >
-              Dashboard
-            </button>
-            <button 
-              onClick={() => navigate("/war-room")} 
-              className="text-xl pencil-text transition-colors opacity-60 hover:opacity-100"
-              data-reaper-expression="thinking"
-              data-reaper-phrases="To the War Room! Let's initiate some disputes.||Tactical transition. Let's get aggressive."
-            >
-              War Room
-            </button>
-            <button 
-              onClick={() => navigate("/identity-graph")} 
-              className="text-xl pencil-text transition-colors opacity-60 hover:opacity-100"
-              data-reaper-expression="thinking"
-              data-reaper-phrases="Viewing the web of connections.||Time to see who's really hiding behind the data."
-            >
-              Identity Graph
-            </button>
-            <button
-              onClick={() => navigate("/shield-logs")}
-              className="text-xl pencil-text transition-colors opacity-60 hover:opacity-100"
-              data-reaper-expression="alert"
-              data-reaper-phrases="Reviewing shield intel.||Let's inspect the threat trail."
-            >
-              Shield Logs
-            </button>
-            <button
-              onClick={() => navigate("/shadow-browser")}
-              className="text-xl pencil-text transition-colors opacity-60 hover:opacity-100"
-              data-reaper-expression="thinking"
-              data-reaper-phrases="Fake browsing noise.||What brokers think you clicked."
-            >
-              Shadow Browser
-            </button>
-            <button
-              onClick={() => navigate("/access-mirror")}
-              className="text-xl pencil-text transition-colors opacity-60 hover:opacity-100"
-              data-reaper-expression="surprised"
-              data-reaper-phrases="Cutting off third-party access. Feels good.||Let's see what they actually know about you.||Time to audit the damage."
-            >
-              Access Mirror
-            </button>
-          </div>
-
-=======
       <AppNavbar
         active="dashboard"
         rightSlot={
->>>>>>> c2f64050592ea3756bc6a31e7be1755038b583c1
           <div className="flex items-center gap-3">
             <div className="hidden lg:flex items-center gap-2">
               <motion.div
