@@ -5,9 +5,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { MessageSquare, Clock, AlertCircle, Send, Siren, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { AppNavbar } from "../components/AppNavbar";
 import { PressureFilter } from "../components/PressureFilter";
 import { PressureText } from "../components/PressureText";
-import { AnimatedDataReaperLogo } from "../components/AnimatedDataReaperLogo";
 import {
   dataReaperQueryKeys,
   useCreateEngagementMessageMutation,
@@ -398,53 +398,9 @@ export default function WarRoom() {
         </div>
       )}
 
-      <nav
-        className="sticky top-0 z-50 px-4 md:px-8 lg:px-12 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 backdrop-blur-sm"
-        style={{ backgroundColor: "rgba(245, 243, 239, 0.88)", borderBottom: "1.5px dashed rgba(0,0,0,0.15)" }}
-      >
-        <div className="w-full flex flex-col gap-3 md:grid md:grid-cols-3 md:items-center">
-          <div className="flex items-center justify-center md:justify-start gap-2 cursor-pointer" onClick={() => navigate("/")}> 
-            <AnimatedDataReaperLogo />
-            <PressureText as="span" className="text-3xl tracking-tight" style={{ fontFamily: "'Dancing Script', cursive", fontWeight: 700 }}>
-              DataReaper
-            </PressureText>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-center gap-6 md:gap-8">
-            <button 
-              onClick={() => navigate("/command-center")} 
-              className="text-xl pencil-text transition-colors opacity-60 hover:opacity-100"
-              data-reaper-expression="thinking"
-              data-reaper-phrases="Switching lenses. Same data, different angle.||Checking the global overview.||Back to the command deck."
-            >
-              Dashboard
-            </button>
-            <button 
-              className="text-xl pencil-text transition-colors opacity-100 hover:opacity-70" 
-              aria-current="page"
-              data-reaper-expression="happy"
-              data-reaper-phrases="Tactical view. Every packet, scrutinized.||I like the smell of legal disputes.||The War Room is quite cozy, isn't it?"
-            >
-              War Room
-            </button>
-            <button 
-              onClick={() => navigate("/identity-graph")} 
-              className="text-xl pencil-text transition-colors opacity-60 hover:opacity-100"
-              data-reaper-expression="thinking"
-              data-reaper-phrases="The full picture. They can't hide.||Connecting the digital dots.||Let's see who's really behind this."
-            >
-              Identity Graph
-            </button>
-            <button
-              onClick={() => navigate("/access-mirror")}
-              className="text-xl pencil-text transition-colors opacity-60 hover:opacity-100"
-              data-reaper-expression="surprised"
-              data-reaper-phrases="Cutting off third-party access. Feels good.||Let's see what they actually know about you.||Time to audit the damage."
-            >
-              Access Mirror
-            </button>
-          </div>
-
+      <AppNavbar
+        active="war-room"
+        rightSlot={
           <div className="flex items-center justify-center md:justify-end gap-2">
             <PressureText as="span" className="text-base hidden lg:block" style={{ fontFamily: "'Patrick Hand', cursive", color: COLORS.textSec }}>
               {scanQuery.data?.status ? `Lifecycle: ${scanQuery.data.status}` : "Loading scan"}
@@ -462,8 +418,8 @@ export default function WarRoom() {
               Start New Scan
             </button>
           </div>
-        </div>
-      </nav>
+        }
+      />
 
       <div className="px-4 md:px-6 pt-4">
         <div className="flex items-center gap-2 mb-3">

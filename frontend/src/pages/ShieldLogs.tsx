@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router";
+import { AppNavbar } from "../components/AppNavbar";
 import { PressureText } from "../components/PressureText";
+import { useRequireAuth } from "../lib/scanContext";
 
 const COLORS = {
   bg: "#f5f3ef",
@@ -46,7 +47,7 @@ function formatTime(value: string) {
 }
 
 export default function ShieldLogs() {
-  const navigate = useNavigate();
+  const authenticatedEmail = useRequireAuth();
   const [threatLog, setThreatLog] = useState<ThreatLogEntry[]>([]);
   const [passwordLog, setPasswordLog] = useState<PasswordLogEntry[]>([]);
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
@@ -77,9 +78,34 @@ export default function ShieldLogs() {
     return () => window.removeEventListener("message", handler);
   }, []);
 
+  if (!authenticatedEmail) {
+    return null;
+  }
+
   return (
-    <div style={{ minHeight: "100vh", background: COLORS.bg, padding: "120px 20px 60px" }}>
-      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+    <div style={{ minHeight: "100vh", background: COLORS.bg }}>
+      <AppNavbar
+        active="shield-logs"
+        rightSlot={(
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
+            <PressureText
+              as="span"
+              style={{ fontFamily: "'Patrick Hand', cursive", color: COLORS.textSec, fontSize: "0.95rem" }}
+            >
+              Signed in: {authenticatedEmail}
+            </PressureText>
+            <button
+              className="hand-drawn-button"
+              onClick={requestLogs}
+              style={{ padding: "8px 14px", backgroundColor: COLORS.blue, color: "#fff" }}
+            >
+              Refresh
+            </button>
+          </div>
+        )}
+      />
+
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 20px 60px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
           <div>
             <PressureText
@@ -98,23 +124,6 @@ export default function ShieldLogs() {
             >
               Malicious sites and password interception attempts recorded by Tripwire.
             </PressureText>
-          </div>
-
-          <div style={{ display: "flex", gap: 12 }}>
-            <button
-              className="hand-drawn-button"
-              onClick={() => navigate("/command-center")}
-              style={{ padding: "10px 16px", backgroundColor: COLORS.card }}
-            >
-              Back to Command Center
-            </button>
-            <button
-              className="hand-drawn-button"
-              onClick={requestLogs}
-              style={{ padding: "10px 16px", backgroundColor: COLORS.blue, color: "#fff" }}
-            >
-              Refresh
-            </button>
           </div>
         </div>
 

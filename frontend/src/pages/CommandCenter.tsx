@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { useNavigate } from "react-router";
 import { Activity, Shield, Trash2, Scale, Maximize2, X } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer } from "recharts";
 import { toast } from "sonner";
 
+import { AppNavbar } from "../components/AppNavbar";
 import { PressureFilter } from "../components/PressureFilter";
 import { PressureText } from "../components/PressureText";
-import { AnimatedDataReaperLogo } from "../components/AnimatedDataReaperLogo";
 import { ApiClientError } from "../lib/apiClient";
 import apiClient from "../lib/apiClient";
 import { stopScan } from "../lib/api";
@@ -341,7 +340,6 @@ function ProgressPill({ percent, status }: { percent: number; status: string }) 
 }
 
 export default function CommandCenter() {
-  const navigate = useNavigate();
   const { setActiveScan } = useScanContext();
   const scanId = useRequireScan();
   const scanQuery = useScanStatusQuery(scanId);
@@ -552,6 +550,25 @@ export default function CommandCenter() {
     }
   }, [hoveredRadarDot, isRadarExpanded, radarTargets]);
 
+  useEffect(() => {
+    if (!isRadarExpanded && !isFeedExpanded) {
+      return;
+    }
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") {
+        return;
+      }
+      setIsRadarExpanded(false);
+      setIsFeedExpanded(false);
+    };
+
+    window.addEventListener("keydown", handleEscape);
+    return () => {
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [isFeedExpanded, isRadarExpanded]);
+
   const renderRadar = (expanded: boolean) => (
     <div className={`relative w-full aspect-square mx-auto ${expanded ? "max-w-[700px]" : "max-w-[460px]"}`}>
       <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 400" style={{ filter: "url(#pencil-sketch)" }}>
@@ -737,60 +754,9 @@ export default function CommandCenter() {
       <PressureFilter />
       <ConnectionBanner status={realtimeStatus} />
 
-      <nav
-        className="sticky top-0 z-50 pt-4 pb-3 px-6 md:px-12 lg:px-16 flex items-center justify-between backdrop-blur-sm"
-        style={{ backgroundColor: "rgba(245, 243, 239, 0.85)", borderBottom: "1.5px dashed rgba(0,0,0,0.15)" }}
-      >
-        <div className="max-w-[1600px] w-full mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}> 
-            <AnimatedDataReaperLogo imageStyle={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.15))" }} />
-            <PressureText as="span" className="text-3xl tracking-tight" style={{ fontFamily: "'Dancing Script', cursive", fontWeight: 700 }}>
-              DataReaper
-            </PressureText>
-          </div>
-
-          <div className="hidden md:flex items-center gap-8">
-            <button 
-              className="text-xl pencil-text transition-colors opacity-100 hover:opacity-70"
-              data-reaper-expression="happy"
-              data-reaper-phrases="Dashboard view. I see everything from up here.||The operations center is humming with activity."
-            >
-              Dashboard
-            </button>
-            <button 
-              onClick={() => navigate("/war-room")} 
-              className="text-xl pencil-text transition-colors opacity-60 hover:opacity-100"
-              data-reaper-expression="thinking"
-              data-reaper-phrases="To the War Room! Let's initiate some disputes.||Tactical transition. Let's get aggressive."
-            >
-              War Room
-            </button>
-            <button 
-              onClick={() => navigate("/identity-graph")} 
-              className="text-xl pencil-text transition-colors opacity-60 hover:opacity-100"
-              data-reaper-expression="thinking"
-              data-reaper-phrases="Viewing the web of connections.||Time to see who's really hiding behind the data."
-            >
-              Identity Graph
-            </button>
-            <button
-              onClick={() => navigate("/shield-logs")}
-              className="text-xl pencil-text transition-colors opacity-60 hover:opacity-100"
-              data-reaper-expression="alert"
-              data-reaper-phrases="Reviewing shield intel.||Let's inspect the threat trail."
-            >
-              Shield Logs
-            </button>
-            <button
-              onClick={() => navigate("/access-mirror")}
-              className="text-xl pencil-text transition-colors opacity-60 hover:opacity-100"
-              data-reaper-expression="surprised"
-              data-reaper-phrases="Cutting off third-party access. Feels good.||Let's see what they actually know about you.||Time to audit the damage."
-            >
-              Access Mirror
-            </button>
-          </div>
-
+      <AppNavbar
+        active="dashboard"
+        rightSlot={
           <div className="flex items-center gap-3">
             <div className="hidden lg:flex items-center gap-2">
               <motion.div
@@ -891,8 +857,8 @@ export default function CommandCenter() {
               {isStartingNewScan ? "Starting..." : "Start New Scan"}
             </button>
           </div>
-        </div>
-      </nav>
+        }
+      />
 
       <div className="max-w-[1600px] mx-auto px-4 py-4 relative z-10">
         <div className="mb-6 border-b-[1.5px] border-dashed border-black/10 pb-5">
@@ -1168,11 +1134,19 @@ export default function CommandCenter() {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-12"
             style={{ background: "rgba(253, 251, 247, 0.82)", backdropFilter: "blur(12px)" }}
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) {
+                setIsRadarExpanded(false);
+              }
+            }}
           >
-            <div className="absolute top-8 right-8">
+            <div className="absolute top-8 right-8 z-20">
               <button
                 type="button"
-                onClick={() => setIsRadarExpanded(false)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setIsRadarExpanded(false);
+                }}
                 className="p-3 rounded-full hover:bg-black/10 transition-colors border-2 border-black/20 bg-white/50"
               >
                 <X className="w-6 h-6 text-[#1a1a1a]" />
@@ -1216,11 +1190,19 @@ export default function CommandCenter() {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-12"
             style={{ background: "rgba(10,10,10,0.85)", backdropFilter: "blur(12px)" }}
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) {
+                setIsFeedExpanded(false);
+              }
+            }}
           >
-            <div className="absolute top-8 right-8">
+            <div className="absolute top-8 right-8 z-20">
               <button
                 type="button"
-                onClick={() => setIsFeedExpanded(false)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setIsFeedExpanded(false);
+                }}
                 className="p-3 rounded-full hover:bg-white/10 transition-colors border-2 border-white/20 bg-black/50"
               >
                 <X className="w-6 h-6 text-white" />

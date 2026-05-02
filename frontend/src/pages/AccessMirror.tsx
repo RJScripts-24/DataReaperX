@@ -1,10 +1,9 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { useNavigate } from "react-router";
 import { toast } from "sonner";
+import { AppNavbar } from "../components/AppNavbar";
 import { PressureFilter } from "../components/PressureFilter";
 import { PressureText } from "../components/PressureText";
-import { AnimatedDataReaperLogo } from "../components/AnimatedDataReaperLogo";
 import { useRequireAuth } from "../lib/scanContext";
 
 const COLORS = {
@@ -340,7 +339,6 @@ function generateMockReport(company: string, _filename: string): DataMirrorRepor
 }
 
 export default function AccessMirror() {
-  const navigate = useNavigate();
   const authenticatedEmail = useRequireAuth();
 
   const [googleConnected, setGoogleConnected] = useState(false);
@@ -443,45 +441,17 @@ export default function AccessMirror() {
     <div style={{ backgroundColor: COLORS.bg, minHeight: "100vh" }}>
       <PressureFilter />
 
-      <nav
-        style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 50,
-          backgroundColor: "rgba(245, 243, 239, 0.85)",
-          backdropFilter: "blur(12px)",
-          borderBottom: "1.5px dashed rgba(0,0,0,0.15)",
-          padding: "16px 24px",
-        }}
-      >
-        <div className="w-full flex flex-col gap-3 md:grid md:grid-cols-3 md:items-center">
-          <div className="flex items-center justify-center md:justify-start gap-2 cursor-pointer" onClick={() => navigate("/")}>
-            <AnimatedDataReaperLogo />
-          </div>
-
-          <div className="hidden md:flex items-center justify-center gap-8">
-            <button onClick={() => navigate("/")} className="text-xl pencil-text transition-colors opacity-60 hover:opacity-100">Dashboard</button>
-            <button onClick={() => navigate("/war-room")} className="text-xl pencil-text transition-colors opacity-60 hover:opacity-100">War Room</button>
-            <button onClick={() => navigate("/identity-graph")} className="text-xl pencil-text transition-colors opacity-60 hover:opacity-100">Identity Graph</button>
-            <button
-              className="text-xl pencil-text transition-colors opacity-100"
-              data-reaper-expression="surprised"
-              data-reaper-phrases="Cutting off third-party access. Feels good.||Let's see what they actually know about you.||Time to audit the damage."
-            >
-              Access Mirror
-            </button>
-          </div>
-
-          <div className="hidden md:flex items-center justify-end">
-            <PressureText
-              as="span"
-              style={{ fontFamily: "'Patrick Hand', cursive", color: COLORS.textSec, fontSize: "0.95rem" }}
-            >
-              Signed in: {authenticatedEmail}
-            </PressureText>
-          </div>
-        </div>
-      </nav>
+      <AppNavbar
+        active="access-mirror"
+        rightSlot={(
+          <PressureText
+            as="span"
+            style={{ fontFamily: "'Patrick Hand', cursive", color: COLORS.textSec, fontSize: "0.95rem" }}
+          >
+            Signed in: {authenticatedEmail}
+          </PressureText>
+        )}
+      />
 
       <main style={{ padding: "24px 12px", maxWidth: "1660px", margin: "0 auto" }}>
         <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}>
