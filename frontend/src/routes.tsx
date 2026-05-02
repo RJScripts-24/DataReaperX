@@ -4,6 +4,7 @@ import Onboarding from "./pages/Onboarding";
 import CommandCenter from "./pages/CommandCenter";
 import IdentityGraph from "./pages/IdentityGraph";
 import WarRoom from "./pages/WarRoom";
+import ShieldLogs from "./pages/ShieldLogs";
 
 export const router = createBrowserRouter([
   {
@@ -25,5 +26,9 @@ export const router = createBrowserRouter([
   {
     path: "/war-room",
     Component: WarRoom,
+  },
+  {
+    path: "/shield-logs",
+    Component: ShieldLogs,
   },
 ]);

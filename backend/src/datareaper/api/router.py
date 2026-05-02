@@ -12,6 +12,7 @@ from datareaper.api.routes import (
     recon,
     reports,
     scans,
+    shield,
     targets,
     v1_contract,
     war_room,
@@ -29,6 +30,7 @@ api_router.include_router(war_room.router, prefix="/war-room", tags=["war-room"]
 api_router.include_router(inbox.router, prefix="/inbox", tags=["inbox"])
 api_router.include_router(reports.router, prefix="/reports", tags=["reports"])
 api_router.include_router(events.router, prefix="/events", tags=["events"])
+api_router.include_router(shield.router, prefix="/shield", tags=["shield"])
 api_router.include_router(resume_router, tags=["agent-control"])
 
 v1_router = APIRouter()

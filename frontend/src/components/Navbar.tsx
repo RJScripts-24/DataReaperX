@@ -74,22 +74,38 @@ export function Navbar() {
         </div>
 
         {/* Right: CTA */}
-        <button
-          onClick={() => navigate("/onboarding")}
-          className="hidden md:block hand-drawn-button"
-          data-reaper-expression="happy"
-          data-reaper-zoom="1.35"
-          data-reaper-phrases="Ready to cross over?||Click to initiate.||Let's get you inside.||Deploying onboarding sequence."
-          style={{
-            fontSize: "16px",
-            padding: "12px 28px",
-            cursor: "pointer",
-          }}
-        >
-          <PressureText variant="medium" className="paper-text" style={{ fontFamily: "'Patrick Hand', cursive" }}>
-            Initialize Screening
-          </PressureText>
-        </button>
+        <div className="hidden md:flex" style={{ alignItems: "center", gap: 12 }}>
+          <button
+            onClick={() => navigate("/shield-logs")}
+            className="hand-drawn-button"
+            style={{
+              fontSize: "14px",
+              padding: "10px 18px",
+              cursor: "pointer",
+              backgroundColor: "#f1eee8",
+            }}
+          >
+            <PressureText variant="medium" className="paper-text" style={{ fontFamily: "'Patrick Hand', cursive" }}>
+              Shield Logs
+            </PressureText>
+          </button>
+          <button
+            onClick={() => navigate("/onboarding")}
+            className="hand-drawn-button"
+            data-reaper-expression="happy"
+            data-reaper-zoom="1.35"
+            data-reaper-phrases="Ready to cross over?||Click to initiate.||Let's get you inside.||Deploying onboarding sequence."
+            style={{
+              fontSize: "16px",
+              padding: "12px 28px",
+              cursor: "pointer",
+            }}
+          >
+            <PressureText variant="medium" className="paper-text" style={{ fontFamily: "'Patrick Hand', cursive" }}>
+              Initialize Screening
+            </PressureText>
+          </button>
+        </div>
 
         {/* Mobile hamburger */}
         <button
@@ -126,6 +142,13 @@ export function Navbar() {
               gap: "16px",
             }}
           >
+            <button
+              onClick={() => navigate("/shield-logs")}
+              className="hand-drawn-button"
+              style={{ fontSize: "16px", padding: "12px", width: "100%" }}
+            >
+              Shield Logs
+            </button>
             <button
               onClick={() => navigate("/onboarding")}
               className="hand-drawn-button"

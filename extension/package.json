@@ -1,0 +1,12 @@
+{
+  "name": "datareaper-tripwire-extension",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "package": "node package-extension.js",
+    "generate-icons": "node generate-icons.js"
+  },
+  "devDependencies": {
+    "canvas": "^3.2.3"
+  }
+}

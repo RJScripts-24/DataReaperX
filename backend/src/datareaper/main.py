@@ -77,12 +77,18 @@ async def log_http_requests(request: Request, call_next):
     clear_logging_context()
     return response
 
+# Build allowed origins — includes dashboard origin from config for prod URL changes
+_cors_origins = list(settings.app_cors_origins)
+if settings.shield_dashboard_origin not in _cors_origins:
+    _cors_origins.append(settings.shield_dashboard_origin)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.app_cors_origins,
+    allow_origins=_cors_origins,
+    allow_origin_regex=r"chrome-extension://[a-z]{32}",  # matches any Chrome extension ID
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*", "X-Session-Id"],
+    allow_headers=["*", "X-Session-Id", "Authorization"],
 )
 app.include_router(api_router, prefix=API_PREFIX)
 app.include_router(v1_router, prefix=V1_PREFIX)

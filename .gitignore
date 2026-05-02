@@ -81,3 +81,9 @@ coverage/
 *.temp
 *.swp
 *.swo
+
+# ------------------------------
+# Chrome Extension Artifacts
+# ------------------------------
+backend/static/datareaper-tripwire.zip
+extension/icons/*.png

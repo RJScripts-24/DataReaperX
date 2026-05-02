@@ -11,6 +11,7 @@ import { AnimatedDataReaperLogo } from "../components/AnimatedDataReaperLogo";
 import { ApiClientError } from "../lib/apiClient";
 import apiClient from "../lib/apiClient";
 import { stopScan } from "../lib/api";
+import { ShieldButton } from "../components/ShieldButton";
 import { useScanContext, useRequireScan } from "../lib/scanContext";
 import { type RealtimeConnectionStatus } from "../lib/wsClient";
 import { useDashboard } from "../lib/useDashboard";
@@ -772,6 +773,14 @@ export default function CommandCenter() {
             >
               Identity Graph
             </button>
+            <button
+              onClick={() => navigate("/shield-logs")}
+              className="text-xl pencil-text transition-colors opacity-60 hover:opacity-100"
+              data-reaper-expression="alert"
+              data-reaper-phrases="Reviewing shield intel.||Let's inspect the threat trail."
+            >
+              Shield Logs
+            </button>
           </div>
 
           <div className="flex items-center gap-3">
@@ -894,7 +903,10 @@ export default function CommandCenter() {
             <MetadataPill label={seedLabel} value={seedValue} />
             <MetadataPill label="Scan ID" value={scanId} />
             <MetadataPill label="Last update" value={formatTimestamp(lastUpdatedAt)} />
-            <ProgressPill percent={displayProgress} status={backendStatus} />
+            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              <ProgressPill percent={displayProgress} status={backendStatus} />
+              <ShieldButton />
+            </div>
           </div>
         </div>
 
