@@ -1,5 +1,6 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
+from datareaper.comms.templates import build_authorized_agent_header, build_opt_out_email
 from datareaper.integrations.llm.base import BaseLLMClient
 from datareaper.integrations.llm.prompt_loader import load_prompt
 from datareaper.legal.citation_builder import build_citations
@@ -19,6 +20,13 @@ async def build_notice_with_llm(
     llm: BaseLLMClient,
 ) -> str:
     legal_basis = JURISDICTION_FRAMEWORK.get(jurisdiction.upper(), "applicable privacy law")
+    subject_name = (
+        (identity or {}).get("name")
+        or (identity or {}).get("real_name")
+        or "Data Subject"
+    )
+    subject_email = str(seed or "").strip() or "unknown@example.com"
+    header = build_authorized_agent_header(subject_name, subject_email)
     system = load_prompt("legal_notice.md")
     prompt = (
         f"Jurisdiction: {jurisdiction}\n"
@@ -28,7 +36,8 @@ async def build_notice_with_llm(
         "Request immediate deletion of all their personal data. "
         f"Legal framework to cite: {legal_basis}."
     )
-    return await llm.generate(prompt=prompt, system=system)
+    drafted = await llm.generate(prompt=prompt, system=system)
+    return header + drafted
 
 
 def build_notice(
@@ -41,18 +50,15 @@ def build_notice(
     subject_name = (
         (identity or {}).get("name")
         or (identity or {}).get("real_name")
-        or "the data subject"
+        or "Data Subject"
     )
+    subject_email = str(seed or "").strip() or "unknown@example.com"
     location = (identity or {}).get("location") or "their current jurisdiction"
-    return (
-        f"To {broker_name},\n\n"
-        f"I am writing on behalf of {subject_name} ({seed}), located in {location}, "
-        "to formally request the immediate deletion of all personal data in your systems. "
-        "This request includes all derived and "
-        "inferred data, and all data shared with affiliates or processors.\n\n"
-        "Any request for additional identity artifacts that exceeds "
-        "proportional verification is declined "
-        "under data minimization principles.\n\n"
-        f"Legal basis: {citations}.\n\n"
-        "Please confirm completion in writing without undue delay."
+    return build_opt_out_email(
+        broker_name=broker_name,
+        user_full_name=subject_name,
+        user_email=subject_email,
+        location=location,
+        citations=citations,
     )
+

@@ -46,16 +46,23 @@ class TaskQueue:
             return []
         return [f"{function_name}:{clean_scan_id}" for function_name in SCAN_SCOPED_FUNCTIONS]
 
-    async def enqueue(self, function_name: str, **kwargs) -> str:
-        stable_job_id = self._stable_job_id(function_name, kwargs)
+    async def enqueue(self, function_name: str, *, dedupe: bool = True, **kwargs) -> str:
+        stable_job_id = self._stable_job_id(function_name, kwargs) if dedupe else None
         job = await self.pool.enqueue_job(function_name, _job_id=stable_job_id, **kwargs)
         increment_metric("jobs_enqueued")
         if job is not None:
             return job.job_id
         return stable_job_id or ""
 
-    async def enqueue_in(self, function_name: str, delay_seconds: int, **kwargs) -> str:
-        stable_job_id = self._stable_job_id(function_name, kwargs)
+    async def enqueue_in(
+        self,
+        function_name: str,
+        delay_seconds: int,
+        *,
+        dedupe: bool = True,
+        **kwargs,
+    ) -> str:
+        stable_job_id = self._stable_job_id(function_name, kwargs) if dedupe else None
         job = await self.pool.enqueue_job(
             function_name,
             _job_id=stable_job_id,

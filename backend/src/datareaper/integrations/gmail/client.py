@@ -17,8 +17,8 @@ class GmailAPIClient:
 		creds = Credentials(
 			token=None,
 			refresh_token=settings.gmail_refresh_token,
-			client_id=settings.gmail_client_id,
-			client_secret=settings.gmail_client_secret,
+			client_id=settings.google_client_id,
+			client_secret=settings.google_client_secret,
 			token_uri="https://oauth2.googleapis.com/token",
 		)
 		self._service = build("gmail", "v1", credentials=creds, cache_discovery=False)

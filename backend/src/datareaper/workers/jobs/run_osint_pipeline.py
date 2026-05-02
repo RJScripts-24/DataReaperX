@@ -325,6 +325,7 @@ async def run_osint_pipeline(ctx: dict, scan_id: str) -> dict:
             next_job_id = await queue.enqueue_in(
                 "run_osint_pipeline",
                 delay_seconds=OSINT_REQUEUE_DELAY_SECONDS,
+                dedupe=False,
                 scan_id=scan_id,
             )
         logger.warning(
@@ -494,6 +495,7 @@ async def run_osint_pipeline(ctx: dict, scan_id: str) -> dict:
             next_job_id = await queue.enqueue_in(
                 "run_osint_pipeline",
                 delay_seconds=OSINT_REQUEUE_DELAY_SECONDS,
+                dedupe=False,
                 scan_id=scan_id,
             )
         elif material_progress == 0:
@@ -565,6 +567,7 @@ async def run_osint_pipeline(ctx: dict, scan_id: str) -> dict:
             next_job_id = await queue.enqueue_in(
                 "run_osint_pipeline",
                 delay_seconds=OSINT_REQUEUE_DELAY_SECONDS,
+                dedupe=False,
                 scan_id=scan_id,
             )
 

@@ -1,13 +1,18 @@
-﻿rules:
+rules:
   apollo:
     method: email
     jurisdiction: [DPDP, GDPR]
+    sender_mode: central
   zoominfo:
     method: webform
     jurisdiction: [DPDP, GDPR, CCPA]
+    sender_mode: central
   spokeo:
     method: webform
     jurisdiction: [DPDP, CCPA]
+    sender_mode: user_oauth
   whitepages:
     method: email
     jurisdiction: [DPDP, GDPR, CCPA]
+    sender_mode: central
+

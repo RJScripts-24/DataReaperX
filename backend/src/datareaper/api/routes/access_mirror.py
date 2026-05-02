@@ -92,8 +92,8 @@ def _max_source(left: str, right: str) -> str:
 
 def _resolve_google_oauth_credentials() -> tuple[str, str]:
     settings = get_settings()
-    client_id = str(settings.google_client_id or settings.gmail_client_id or "").strip()
-    client_secret = str(settings.google_client_secret or settings.gmail_client_secret or "").strip()
+    client_id = str(settings.google_client_id or "").strip()
+    client_secret = str(settings.google_client_secret or "").strip()
     return client_id, client_secret
 
 

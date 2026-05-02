@@ -385,7 +385,7 @@ async def _load_bundle(db: DbSession, scan_id: str) -> dict[str, Any]:
 
 @router.get("/auth/google/config", response_model=GoogleAuthConfigResponse)
 async def get_google_auth_config() -> GoogleAuthConfigResponse:
-    client_id = str(get_settings().gmail_client_id or "").strip()
+    client_id = str(get_settings().google_client_id or "").strip()
     return GoogleAuthConfigResponse(
         configured=bool(client_id),
         clientId=client_id,
@@ -396,7 +396,7 @@ async def get_google_auth_config() -> GoogleAuthConfigResponse:
 async def create_session(payload: CreateSessionRequest) -> CreateSessionResponse:
     settings = get_settings()
     try:
-        identity: GoogleIdentity = verify_google_id_token(payload.idToken, settings.gmail_client_id)
+        identity: GoogleIdentity = verify_google_id_token(payload.idToken, settings.google_client_id)
     except GoogleOAuthError as exc:
         message = str(exc)
         if "not configured" in message.lower():
