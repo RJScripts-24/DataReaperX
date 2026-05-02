@@ -9,7 +9,8 @@ export type AppNavRoute =
   | "war-room"
   | "identity-graph"
   | "access-mirror"
-  | "shield-logs";
+  | "shield-logs"
+  | "shadow-browser";
 
 const NAV_ITEMS: Array<{ id: AppNavRoute; label: string; path: string }> = [
   { id: "dashboard", label: "Dashboard", path: "/dashboard" },
@@ -17,6 +18,7 @@ const NAV_ITEMS: Array<{ id: AppNavRoute; label: string; path: string }> = [
   { id: "identity-graph", label: "Identity Graph", path: "/identity-graph" },
   { id: "access-mirror", label: "Access Mirror", path: "/access-mirror" },
   { id: "shield-logs", label: "Shield Logs", path: "/shield-logs" },
+  { id: "shadow-browser", label: "Shadow Browser", path: "/shadow-browser" },
 ];
 
 type AppNavbarProps = {

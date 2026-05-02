@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Annotated
 
-from fastapi import Depends
+from fastapi import Depends, Header, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from datareaper.api.session_auth import SessionPrincipal, get_session
 from datareaper.core.config import Settings, get_settings
 from datareaper.db.session import get_db_session
 from datareaper.services.audit_service import AuditService
@@ -18,6 +20,23 @@ from datareaper.services.target_service import TargetService
 from datareaper.services.war_room_service import WarRoomService
 
 DbSession = Annotated[AsyncSession, Depends(get_db_session)]
+
+
+def require_google_session(
+    x_session_id: str | None = Header(default=None, alias="X-Session-Id"),
+) -> SessionPrincipal:
+    session_id = str(x_session_id or "").strip()
+    if not session_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing session token.")
+    principal = get_session(session_id)
+    if principal is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session is invalid or expired.")
+    if principal.expires_at <= datetime.now(timezone.utc):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session has expired.")
+    return principal
+
+
+RequireGoogleSession = Annotated[SessionPrincipal, Depends(require_google_session)]
 
 
 def get_app_settings() -> Settings:

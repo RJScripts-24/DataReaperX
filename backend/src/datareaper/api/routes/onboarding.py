@@ -4,7 +4,7 @@ from time import perf_counter
 
 from fastapi import APIRouter, Depends, Request
 
-from datareaper.api.deps import DbSession, get_onboarding_service
+from datareaper.api.deps import DbSession, RequireGoogleSession, get_onboarding_service
 from datareaper.intake.consent_guard import enforce_consent
 from datareaper.core.logging import get_logger
 from datareaper.schemas.onboarding import OnboardingInitializeRequest, OnboardingInitializeResponse
@@ -19,6 +19,7 @@ async def initialize(
     request: Request,
     payload: OnboardingInitializeRequest,
     db: DbSession,
+    principal: RequireGoogleSession,
     service: OnboardingService = Depends(get_onboarding_service),
 ) -> dict:
     started = perf_counter()
@@ -35,7 +36,13 @@ async def initialize(
 
     try:
         enforce_consent(payload.consent_confirmed)
-        response = await service.initialize_scan(db, payload.seeds, payload.seed_type, payload.jurisdiction)
+        response = await service.initialize_scan(
+            db,
+            payload.seeds,
+            payload.seed_type,
+            payload.jurisdiction,
+            owner_google_sub=principal.google_sub,
+        )
         logger.info(
             "onboarding_initialize_request_completed",
             request_id=request_id,

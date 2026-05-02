@@ -5,15 +5,14 @@ import { toast } from "sonner";
 
 import { PressureFilter } from "../components/PressureFilter";
 import { PressureText } from "../components/PressureText";
-import { createScan } from "../lib/api";
 import apiClient, { ApiClientError } from "../lib/apiClient";
 import { useScanContext } from "../lib/scanContext";
-import { createGoogleSession, getAuthSession } from "../lib/sessionManager";
+import { createGoogleSession, getAuthSession, setScanPending } from "../lib/sessionManager";
 
 type GoogleCredentialResponse = { credential?: string };
 type GoogleAuthConfigResponse = { configured: boolean; clientId: string };
 
-const DASHBOARD_ROUTE = "/dashboard";
+const DASHBOARD_ROUTE = "/command-center";
 let initializedGoogleApiRef: unknown = null;
 let initializedGoogleClientId: string | null = null;
 let activeGoogleCredentialHandler: ((response: GoogleCredentialResponse) => void) | null = null;
@@ -97,22 +96,9 @@ async function ensureGoogleIdentityClient(clientId: string): Promise<any> {
   return googleApi;
 }
 
-function extractConflictScanId(error: ApiClientError): string | null {
-  if (!Array.isArray(error.details)) {
-    return null;
-  }
-  for (const detail of error.details) {
-    const maybeId = typeof detail?.scanId === "string" ? detail.scanId.trim() : "";
-    if (maybeId) {
-      return maybeId;
-    }
-  }
-  return null;
-}
-
 export default function Onboarding() {
   const navigate = useNavigate();
-  const { scanId, setActiveScan } = useScanContext();
+  const { scanId } = useScanContext();
   const googleButtonRef = useRef<HTMLDivElement | null>(null);
 
   const [sessionEmail, setSessionEmail] = useState<string | null>(() => getAuthSession()?.email ?? null);
@@ -122,33 +108,6 @@ export default function Onboarding() {
   const [isAutoRouting, setIsAutoRouting] = useState(false);
   const [isGoogleButtonReady, setIsGoogleButtonReady] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  const startOrResumeScan = async (email: string) => {
-    const normalizedEmail = String(email).trim().toLowerCase();
-    if (!normalizedEmail) {
-      throw new Error("Authenticated Google email is missing.");
-    }
-
-    try {
-      const response = await createScan({
-        seed: { type: "email", value: normalizedEmail },
-        jurisdictionHint: "AUTO",
-      });
-      setActiveScan(response.scanId);
-      navigate(DASHBOARD_ROUTE, { replace: true });
-      return;
-    } catch (error) {
-      if (error instanceof ApiClientError && error.code === "scan_in_progress") {
-        const recoveredScanId = extractConflictScanId(error);
-        if (recoveredScanId) {
-          setActiveScan(recoveredScanId);
-          navigate(DASHBOARD_ROUTE, { replace: true });
-          return;
-        }
-      }
-      throw error;
-    }
-  };
 
   useEffect(() => {
     let isMounted = true;
@@ -166,7 +125,7 @@ export default function Onboarding() {
           return;
         }
         setGoogleClientId("");
-        setErrorMessage("Google OAuth is not configured on backend yet. Add GMAIL_CLIENT_ID and retry.");
+        setErrorMessage("Google OAuth is not configured on backend yet. Add GOOGLE_CLIENT_ID and retry.");
       })
       .catch(() => {
         if (!isMounted) {
@@ -199,19 +158,9 @@ export default function Onboarding() {
     setIsAutoRouting(true);
     setErrorMessage(null);
 
-    void startOrResumeScan(sessionEmail)
-      .catch((error) => {
-        const message =
-          error instanceof ApiClientError
-            ? error.message
-            : error instanceof Error
-              ? error.message
-              : "Failed to open dashboard for this account.";
-        setErrorMessage(message);
-      })
-      .finally(() => {
-        setIsAutoRouting(false);
-      });
+    setScanPending(true);
+    navigate(DASHBOARD_ROUTE, { replace: true });
+    setIsAutoRouting(false);
   }, [isAutoRouting, isSigningIn, scanId, sessionEmail]);
 
   useEffect(() => {
@@ -238,8 +187,9 @@ export default function Onboarding() {
         const session = await createGoogleSession(idToken);
         const normalizedEmail = String(session.email).trim().toLowerCase();
         setSessionEmail(normalizedEmail);
+        setScanPending(true);
         toast.success(`Signed in as ${normalizedEmail}`);
-        await startOrResumeScan(normalizedEmail);
+        navigate(DASHBOARD_ROUTE, { replace: true });
       } catch (error) {
         const message =
           error instanceof ApiClientError

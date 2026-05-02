@@ -5,9 +5,12 @@ from fastapi.testclient import TestClient
 from datareaper.main import app
 from datareaper.orchestrator.nodes import email_probe
 
+from tests.integration.auth import google_session_headers
+
 
 def test_scan_websocket_receives_stage_complete_from_email_probe(monkeypatch) -> None:
     with TestClient(app) as client:
+        headers = google_session_headers(client, monkeypatch, "ws-events@email.com")
         initialized = client.post(
             "/api/onboarding/initialize",
             json={
@@ -16,6 +19,7 @@ def test_scan_websocket_receives_stage_complete_from_email_probe(monkeypatch) ->
                 "jurisdiction": "DPDP",
                 "consent_confirmed": True,
             },
+            headers=headers,
         )
         assert initialized.status_code == 200
         scan_id = initialized.json()["scan_id"]

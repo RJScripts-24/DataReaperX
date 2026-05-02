@@ -375,9 +375,13 @@ DataReaper follows a modern microservices-inspired architecture with clear separ
    # AI
    GROQ_API_KEY=your_groq_api_key
 
-   # Gmail (optional)
-   GMAIL_CLIENT_ID=your_client_id
-   GMAIL_CLIENT_SECRET=your_client_secret
+   # Google sign-in + Access Mirror (Web OAuth client)
+   GOOGLE_CLIENT_ID=your_client_id.apps.googleusercontent.com
+   GOOGLE_CLIENT_SECRET=your_client_secret
+
+   # Gmail API only — optional, for inbox/send features
+   GMAIL_CLIENT_ID=your_gmail_api_client_id
+   GMAIL_CLIENT_SECRET=your_gmail_api_client_secret
 
    # App
    APP_DEBUG=true
