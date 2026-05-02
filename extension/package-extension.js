@@ -22,6 +22,7 @@ const OUT_PATH = path.join(OUT_DIR, "datareaper-tripwire.zip");
 const FILES_TO_ZIP = [
   "manifest.json",
   "background.js",
+  "shadow-browser.js",
   "background-config-init.js",
   "content.js",
   "token-bridge.js",

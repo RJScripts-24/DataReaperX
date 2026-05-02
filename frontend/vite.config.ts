@@ -24,6 +24,13 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  // OneDrive / cloud-sync folders often break native FS events; polling keeps HMR in sync.
+  server: {
+    watch: {
+      usePolling: true,
+      interval: 1000,
+    },
+  },
   resolve: {
     alias: {
       // Alias @ to the src directory

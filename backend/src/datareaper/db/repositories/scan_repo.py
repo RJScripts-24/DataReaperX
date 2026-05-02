@@ -30,6 +30,31 @@ TERMINAL_SCAN_STATUSES = {"completed", "resolved", "failed", "cancelled"}
 logger = get_logger(__name__)
 
 
+def _norm_email(value: str | None) -> str:
+    return str(value or "").strip().lower()
+
+
+def _assert_actor_may_access_scan(
+    scan_job: ScanJob,
+    seed: Seed | None,
+    *,
+    actor_google_sub: str | None,
+    actor_email: str | None,
+) -> None:
+    """Enforce per-user isolation when an OAuth actor is present (API requests)."""
+    if not (actor_google_sub or "").strip() and not (actor_email or "").strip():
+        return
+    owner = str(scan_job.owner_google_sub or "").strip()
+    actor_sub = str(actor_google_sub or "").strip()
+    if owner:
+        if actor_sub and owner == actor_sub:
+            return
+        raise ResourceNotFoundError(f"Scan {scan_job.id} not found")
+    if seed and _norm_email(actor_email) and _norm_email(seed.normalized_value) == _norm_email(actor_email):
+        return
+    raise ResourceNotFoundError(f"Scan {scan_job.id} not found")
+
+
 def _is_active_scan_status(status: str | None) -> bool:
     normalized = str(status or "").strip().lower()
     if not normalized:
@@ -80,10 +105,12 @@ class ScanRepository:
                 normalized_value=scan["normalized_seed"],
             )
         )
+        owner_sub = str(scan.get("owner_google_sub") or "").strip() or None
         session.add(
             ScanJob(
                 id=scan["id"],
                 seed_id=seed_id,
+                owner_google_sub=owner_sub,
                 status=scan["status"],
                 progress=scan["progress"],
                 current_stage=scan["current_stage"],
@@ -258,8 +285,20 @@ class ScanRepository:
         await session.commit()
         return scan
 
-    async def get_scan(self, session: AsyncSession | None, scan_id: str) -> dict:
-        bundle = await self.load_scan_bundle(session, scan_id)
+    async def get_scan(
+        self,
+        session: AsyncSession | None,
+        scan_id: str,
+        *,
+        actor_google_sub: str | None = None,
+        actor_email: str | None = None,
+    ) -> dict:
+        bundle = await self.load_scan_bundle(
+            session,
+            scan_id,
+            actor_google_sub=actor_google_sub,
+            actor_email=actor_email,
+        )
         return {
             "scan_id": bundle["scan"]["id"],
             "status": bundle["scan"]["status"],
@@ -267,24 +306,48 @@ class ScanRepository:
             "progress": bundle["scan"]["progress"],
         }
 
-    async def list_active_scan_ids(self, session: AsyncSession | None) -> list[str]:
+    async def list_active_scan_ids(
+        self,
+        session: AsyncSession | None,
+        *,
+        owner_google_sub: str | None = None,
+    ) -> list[str]:
         if session is None:
             active_ids: list[str] = []
             for scan_id in memory_store.list_scan_ids():
                 bundle = memory_store.get_scan_bundle(scan_id) or {}
-                status = (bundle.get("scan") or {}).get("status")
-                if _is_active_scan_status(status):
-                    active_ids.append(scan_id)
+                scan = bundle.get("scan") or {}
+                status = scan.get("status")
+                if not _is_active_scan_status(status):
+                    continue
+                if owner_google_sub:
+                    mem_owner = str(scan.get("owner_google_sub") or "").strip()
+                    if mem_owner != str(owner_google_sub).strip():
+                        continue
+                active_ids.append(scan_id)
             return active_ids
 
-        rows = await session.execute(select(ScanJob.id, ScanJob.status))
-        return [
-            scan_id
-            for scan_id, status in rows.all()
-            if _is_active_scan_status(status)
-        ]
+        stmt = select(ScanJob.id, ScanJob.status, ScanJob.owner_google_sub)
+        rows = await session.execute(stmt)
+        out: list[str] = []
+        for scan_id, status, row_owner in rows.all():
+            if not _is_active_scan_status(status):
+                continue
+            if owner_google_sub:
+                if str(row_owner or "").strip() != str(owner_google_sub).strip():
+                    continue
+            out.append(scan_id)
+        return out
 
-    async def stop_scan(self, session: AsyncSession | None, scan_id: str, reason: str | None = None) -> dict:
+    async def stop_scan(
+        self,
+        session: AsyncSession | None,
+        scan_id: str,
+        reason: str | None = None,
+        *,
+        actor_google_sub: str | None = None,
+        actor_email: str | None = None,
+    ) -> dict:
         message = "Scan stopped by user."
         if reason:
             message = f"Scan stopped by user: {reason}"
@@ -313,6 +376,13 @@ class ScanRepository:
         scan = await session.get(ScanJob, scan_id)
         if scan is None:
             raise ResourceNotFoundError(f"Scan {scan_id} not found")
+        seed = await session.get(Seed, scan.seed_id) if scan.seed_id else None
+        _assert_actor_may_access_scan(
+            scan,
+            seed,
+            actor_google_sub=actor_google_sub,
+            actor_email=actor_email,
+        )
 
         scan.status = "cancelled"
         scan.current_stage = "stopped_by_user"
@@ -333,15 +403,53 @@ class ScanRepository:
             "progress": int(scan.progress or 0),
         }
 
-    async def load_scan_bundle(self, session: AsyncSession | None, scan_id: str) -> dict:
+    async def load_scan_bundle(
+        self,
+        session: AsyncSession | None,
+        scan_id: str,
+        *,
+        actor_google_sub: str | None = None,
+        actor_email: str | None = None,
+    ) -> dict:
         if session is None:
             bundle = memory_store.get_scan_bundle(scan_id)
             if bundle is None:
                 raise ResourceNotFoundError(f"Scan {scan_id} not found")
+            scan = bundle.get("scan") or {}
+            fake_job = ScanJob(
+                id=str(scan.get("id") or scan_id),
+                seed_id=None,
+                owner_google_sub=str(scan.get("owner_google_sub") or "").strip() or None,
+                status=str(scan.get("status") or ""),
+                progress=int(scan.get("progress") or 0),
+                current_stage=str(scan.get("current_stage") or ""),
+                jurisdiction=str(scan.get("jurisdiction") or "DPDP"),
+            )
+            fake_seed = (
+                Seed(
+                    id="mem",
+                    value=str(scan.get("normalized_seed") or ""),
+                    seed_type=str(scan.get("seed_type") or "email"),
+                    normalized_value=str(scan.get("normalized_seed") or ""),
+                )
+                if scan.get("normalized_seed")
+                else None
+            )
+            _assert_actor_may_access_scan(
+                fake_job,
+                fake_seed,
+                actor_google_sub=actor_google_sub,
+                actor_email=actor_email,
+            )
             return bundle
 
         try:
-            return await self._load_scan_bundle_from_db(session, scan_id)
+            return await self._load_scan_bundle_from_db(
+                session,
+                scan_id,
+                actor_google_sub=actor_google_sub,
+                actor_email=actor_email,
+            )
         except Exception as exc:
             if not _is_transient_db_error(exc):
                 raise
@@ -360,14 +468,32 @@ class ScanRepository:
                 error=str(exc),
             )
             async with SessionLocal() as fresh_session:
-                return await self._load_scan_bundle_from_db(fresh_session, scan_id)
+                return await self._load_scan_bundle_from_db(
+                    fresh_session,
+                    scan_id,
+                    actor_google_sub=actor_google_sub,
+                    actor_email=actor_email,
+                )
 
-    async def _load_scan_bundle_from_db(self, session: AsyncSession, scan_id: str) -> dict:
+    async def _load_scan_bundle_from_db(
+        self,
+        session: AsyncSession,
+        scan_id: str,
+        *,
+        actor_google_sub: str | None = None,
+        actor_email: str | None = None,
+    ) -> dict:
         scan_job = await session.get(ScanJob, scan_id)
         if scan_job is None:
             raise ResourceNotFoundError(f"Scan {scan_id} not found")
 
         seed = await session.get(Seed, scan_job.seed_id) if scan_job.seed_id else None
+        _assert_actor_may_access_scan(
+            scan_job,
+            seed,
+            actor_google_sub=actor_google_sub,
+            actor_email=actor_email,
+        )
         stages = await session.execute(select(ScanStage).where(ScanStage.scan_job_id == scan_id))
         identity = await session.execute(
             select(IdentityProfile).where(IdentityProfile.scan_job_id == scan_id)

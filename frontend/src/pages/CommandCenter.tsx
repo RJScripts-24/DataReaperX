@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
 import { Activity, Shield, Trash2, Scale, Maximize2, X } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer } from "recharts";
@@ -9,12 +10,13 @@ import { PressureFilter } from "../components/PressureFilter";
 import { PressureText } from "../components/PressureText";
 import { ApiClientError } from "../lib/apiClient";
 import apiClient from "../lib/apiClient";
-import { stopScan } from "../lib/api";
+import { createScan, stopScan } from "../lib/api";
 import { ShieldButton } from "../components/ShieldButton";
 import { useScanContext, useRequireScan } from "../lib/scanContext";
 import { type RealtimeConnectionStatus } from "../lib/wsClient";
 import { useDashboard } from "../lib/useDashboard";
 import { useEngagementsQuery, useScanStatusQuery } from "../lib/hooks";
+import { getAuthSession, isScanPending, setScanPending } from "../lib/sessionManager";
 
 const COLORS = {
   bg: "#f5f3ef",
@@ -339,9 +341,25 @@ function ProgressPill({ percent, status }: { percent: number; status: string }) 
   );
 }
 
+function extractConflictScanId(error: ApiClientError): string | null {
+  if (!Array.isArray(error.details)) {
+    return null;
+  }
+  for (const detail of error.details) {
+    const maybeId = typeof detail?.scanId === "string" ? detail.scanId.trim() : "";
+    if (maybeId) {
+      return maybeId;
+    }
+  }
+  return null;
+}
+
 export default function CommandCenter() {
+  const navigate = useNavigate();
   const { setActiveScan } = useScanContext();
   const scanId = useRequireScan();
+  const session = getAuthSession();
+  const scanPending = isScanPending();
   const scanQuery = useScanStatusQuery(scanId);
   const engagementsQuery = useEngagementsQuery(scanId);
 
@@ -352,8 +370,54 @@ export default function CommandCenter() {
   const [isStartingNewScan, setIsStartingNewScan] = useState(false);
   const [isStopped, setIsStopped] = useState(false);
   const [displayProgress, setDisplayProgress] = useState(0);
+  const [isInitializingScan, setIsInitializingScan] = useState(false);
   const { state, connectionStatus, hasError, refetch } = useDashboard(scanId);
   const realtimeStatus = connectionStatus;
+
+  useEffect(() => {
+    if (!session || scanId || !scanPending || isInitializingScan) {
+      return;
+    }
+
+    const normalizedEmail = String(session.email || "").trim().toLowerCase();
+    if (!normalizedEmail) {
+      setScanPending(false);
+      navigate("/onboarding", { replace: true });
+      return;
+    }
+
+    setIsInitializingScan(true);
+    createScan({
+      seed: { type: "email", value: normalizedEmail },
+      jurisdictionHint: "AUTO",
+    })
+      .then((response) => {
+        setActiveScan(response.scanId);
+        setScanPending(false);
+      })
+      .catch((error) => {
+        if (error instanceof ApiClientError && error.code === "scan_in_progress") {
+          const recoveredScanId = extractConflictScanId(error);
+          if (recoveredScanId) {
+            setActiveScan(recoveredScanId);
+            setScanPending(false);
+            return;
+          }
+        }
+        setScanPending(false);
+        const message =
+          error instanceof ApiClientError
+            ? error.message
+            : error instanceof Error
+              ? error.message
+              : "Failed to start scan.";
+        toast.error(message);
+        navigate("/onboarding", { replace: true });
+      })
+      .finally(() => {
+        setIsInitializingScan(false);
+      });
+  }, [isInitializingScan, navigate, scanId, scanPending, session, setActiveScan]);
 
   useEffect(() => {
     if (!scanId) {
@@ -526,25 +590,6 @@ export default function CommandCenter() {
     () => radarTargets.find((target) => target.id === hoveredRadarDotId) ?? null,
     [hoveredRadarDotId, radarTargets]
   );
-
-  useEffect(() => {
-    if (!hoveredRadarDotId) {
-      return;
-    }
-    const stillExists = radarTargets.some((target) => target.id === hoveredRadarDotId);
-    if (!stillExists) {
-      setHoveredRadarDotId(null);
-    }
-  }, [hoveredRadarDotId, radarTargets]);
-
-  useEffect(() => {
-    if (!isRadarExpanded) {
-      return;
-    }
-    if (!hoveredRadarDot && radarTargets.length > 0) {
-      setHoveredRadarDotId(radarTargets[0]?.id ?? null);
-    }
-  }, [hoveredRadarDot, isRadarExpanded, radarTargets]);
 
   useEffect(() => {
     if (!isRadarExpanded && !isFeedExpanded) {

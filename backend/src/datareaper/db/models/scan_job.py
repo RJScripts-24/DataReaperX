@@ -10,6 +10,7 @@ class ScanJob(Base, TimestampMixin):
 
     id = Column(String(36), primary_key=True)
     seed_id = Column(String(36), nullable=True)
+    owner_google_sub = Column(String(128), nullable=True)
     status = Column(String(32), default="initializing")
     progress = Column(Integer, default=0)
     current_stage = Column(String(64), default="validate_seed")

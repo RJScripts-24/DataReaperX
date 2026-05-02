@@ -4,6 +4,7 @@ const SESSION_ID_STORAGE_KEY = "dr_session_id";
 const SESSION_EMAIL_STORAGE_KEY = "dr_session_email";
 const SESSION_GOOGLE_SUB_STORAGE_KEY = "dr_session_google_sub";
 const SESSION_EXPIRY_STORAGE_KEY = "dr_session_expires_at";
+const SCAN_PENDING_STORAGE_KEY = "dr_scan_pending";
 
 export type AuthSession = {
   sessionId: string;
@@ -78,6 +79,7 @@ export function clearSession(): void {
   sessionStorage.removeItem(SESSION_EMAIL_STORAGE_KEY);
   sessionStorage.removeItem(SESSION_GOOGLE_SUB_STORAGE_KEY);
   sessionStorage.removeItem(SESSION_EXPIRY_STORAGE_KEY);
+  sessionStorage.removeItem(SCAN_PENDING_STORAGE_KEY);
 }
 
 export function getAuthSession(): AuthSession | null {
@@ -102,6 +104,24 @@ export function getAuthenticatedEmail(): string | null {
 
 export function isAuthenticated(): boolean {
   return getAuthSession() !== null;
+}
+
+export function setScanPending(isPending: boolean): void {
+  if (!hasWindow()) {
+    return;
+  }
+  if (isPending) {
+    sessionStorage.setItem(SCAN_PENDING_STORAGE_KEY, "true");
+  } else {
+    sessionStorage.removeItem(SCAN_PENDING_STORAGE_KEY);
+  }
+}
+
+export function isScanPending(): boolean {
+  if (!hasWindow()) {
+    return false;
+  }
+  return sessionStorage.getItem(SCAN_PENDING_STORAGE_KEY) === "true";
 }
 
 export async function createGoogleSession(idToken: string): Promise<AuthSession> {

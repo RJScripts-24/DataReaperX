@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 import secrets
 from typing import Any, TypeVar
 
@@ -12,6 +12,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 
 from datareaper.api.deps import DbSession, get_onboarding_service, get_scan_service
+from datareaper.api.session_auth import SessionPrincipal, get_session, issue_session
 from datareaper.comms.dispatch_recipients import resolve_dispatch_recipient
 from datareaper.comms.outbound_dispatcher import dispatch_notice
 from datareaper.comms.oauth import GoogleOAuthError, GoogleIdentity, verify_google_id_token
@@ -78,20 +79,12 @@ logger = get_logger(__name__)
 
 _SCAN_REPO = ScanRepository()
 _DASHBOARD_REPO = DashboardRepository()
-_SESSION_TTL = timedelta(hours=8)
-_SESSIONS: dict[str, "SessionPrincipal"] = {}
 _MANUAL_MESSAGES: dict[tuple[str, str], list[EngagementMessage]] = {}
 T = TypeVar("T")
 
 
 class StopScanRequest(BaseModel):
     reason: str | None = None
-
-
-class SessionPrincipal(BaseModel):
-    email: str
-    google_sub: str
-    expires_at: datetime
 
 
 def _api_error(status_code: int, code: str, message: str, details: list[dict[str, Any]] | None = None) -> JSONResponse:
@@ -114,32 +107,25 @@ def _normalized_email(value: str | None) -> str:
     return str(value or "").strip().lower()
 
 
-def _seed_matches_owner(bundle: dict[str, Any], owner_email: str) -> bool:
-    scan = bundle.get("scan", {})
-    return _normalized_email(scan.get("normalized_seed")) == _normalized_email(owner_email)
-
-
 def _require_session(x_session_id: str | None = Header(default=None, alias="X-Session-Id")) -> SessionPrincipal:
     session_id = (x_session_id or "").strip()
     if not session_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing session token.")
 
-    principal = _SESSIONS.get(session_id)
+    principal = get_session(session_id)
     if principal is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session is invalid or expired.")
-
-    if principal.expires_at <= _now_utc():
-        _SESSIONS.pop(session_id, None)
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session has expired.")
 
     return principal
 
 
 async def _load_owned_bundle(db: DbSession, scan_id: str, principal: SessionPrincipal) -> dict[str, Any]:
-    bundle = await _load_bundle(db, scan_id)
-    if not _seed_matches_owner(bundle, principal.email):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have access to this scan.")
-    return bundle
+    return await _SCAN_REPO.load_scan_bundle(
+        db,
+        scan_id,
+        actor_google_sub=principal.google_sub,
+        actor_email=principal.email,
+    )
 
 
 def _parse_datetime(value: str | None) -> datetime:
@@ -379,10 +365,6 @@ def _message_metadata(raw: dict[str, Any] | None) -> MessageMetadata | None:
     )
 
 
-async def _load_bundle(db: DbSession, scan_id: str) -> dict[str, Any]:
-    return await _SCAN_REPO.load_scan_bundle(db, scan_id)
-
-
 @router.get("/auth/google/config", response_model=GoogleAuthConfigResponse)
 async def get_google_auth_config() -> GoogleAuthConfigResponse:
     client_id = str(get_settings().google_client_id or "").strip()
@@ -403,13 +385,8 @@ async def create_session(payload: CreateSessionRequest) -> CreateSessionResponse
             return _api_error(503, "google_oauth_not_configured", message)
         return _api_error(401, "invalid_google_token", message)
 
-    session_id = f"ses_{secrets.token_hex(12)}"
-    expires_at = _now_utc() + _SESSION_TTL
-    _SESSIONS[session_id] = SessionPrincipal(
-        email=identity.email,
-        google_sub=identity.subject,
-        expires_at=expires_at,
-    )
+    session_id, principal = issue_session(email=identity.email, google_sub=identity.subject)
+    expires_at = principal.expires_at
     return CreateSessionResponse(
         sessionId=session_id,
         expiresAt=expires_at,
@@ -439,28 +416,18 @@ async def create_scan(
         return _api_error(403, "seed_mismatch", "Scan seed must match your signed-in Google email.")
 
     try:
-        active_scan_ids = await _SCAN_REPO.list_active_scan_ids(db)
+        active_scan_ids = await _SCAN_REPO.list_active_scan_ids(db, owner_google_sub=principal.google_sub)
     except Exception as exc:
         logger.warning("active_scan_check_failed", error=str(exc))
         active_scan_ids = []
 
     if active_scan_ids:
-        owner_active_scan_ids: list[str] = []
-        for scan_id in active_scan_ids:
-            try:
-                active_bundle = await _load_bundle(db, scan_id)
-            except ResourceNotFoundError:
-                continue
-            if _seed_matches_owner(active_bundle, principal.email):
-                owner_active_scan_ids.append(scan_id)
-
-        if owner_active_scan_ids:
-            return _api_error(
-                409,
-                "scan_in_progress",
-                "A scan is already in progress for this account.",
-                details=[{"scanId": owner_active_scan_ids[0]}],
-            )
+        return _api_error(
+            409,
+            "scan_in_progress",
+            "A scan is already in progress for this account.",
+            details=[{"scanId": active_scan_ids[0]}],
+        )
 
     jurisdiction = payload.jurisdictionHint if payload.jurisdictionHint != "AUTO" else get_settings().default_jurisdiction
 
@@ -470,6 +437,7 @@ async def create_scan(
             seeds=[principal.email],
             seed_type="email",
             jurisdiction=jurisdiction,
+            owner_google_sub=principal.google_sub,
         )
     except (ValueError, InvalidSeedError) as exc:
         logger.warning(
@@ -542,7 +510,13 @@ async def stop_scan(
     except ResourceNotFoundError:
         return _api_error(404, "scan_not_found", f"Scan '{scanId}' was not found.")
 
-    stopped = await service.stop_scan(db, scanId, reason=payload.reason)
+    stopped = await service.stop_scan(
+        db,
+        scanId,
+        reason=payload.reason,
+        actor_google_sub=principal.google_sub,
+        actor_email=principal.email,
+    )
     return {
         "scanId": scanId,
         "status": stopped.get("status", "cancelled"),
@@ -559,7 +533,12 @@ async def get_dashboard_summary(scanId: str, db: DbSession, principal: SessionPr
         return _api_error(404, "scan_not_found", f"Scan '{scanId}' was not found.")
 
     try:
-        dashboard = await _DASHBOARD_REPO.get_dashboard(db, scanId)
+        dashboard = await _DASHBOARD_REPO.get_dashboard(
+            db,
+            scanId,
+            actor_google_sub=principal.google_sub,
+            actor_email=principal.email,
+        )
     except ResourceNotFoundError:
         return _api_error(404, "scan_not_found", f"Scan '{scanId}' was not found.")
 

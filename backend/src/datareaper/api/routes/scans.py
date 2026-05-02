@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from datareaper.api.deps import DbSession, get_scan_service
+from datareaper.api.deps import DbSession, RequireGoogleSession, get_scan_service
 from datareaper.schemas.scan import ScanStatusResponse
 from datareaper.services.scan_service import ScanService
 
@@ -16,9 +16,17 @@ class StopScanRequest(BaseModel):
 
 @router.get("/{scan_id}", response_model=ScanStatusResponse)
 async def get_scan(
-    scan_id: str, db: DbSession, service: ScanService = Depends(get_scan_service)
+    scan_id: str,
+    db: DbSession,
+    principal: RequireGoogleSession,
+    service: ScanService = Depends(get_scan_service),
 ) -> dict:
-    return await service.get_status(db, scan_id)
+    return await service.get_status(
+        db,
+        scan_id,
+        actor_google_sub=principal.google_sub,
+        actor_email=principal.email,
+    )
 
 
 @router.post("/{scan_id}/stop")
@@ -26,6 +34,13 @@ async def stop_scan(
     scan_id: str,
     payload: StopScanRequest,
     db: DbSession,
+    principal: RequireGoogleSession,
     service: ScanService = Depends(get_scan_service),
 ) -> dict:
-    return await service.stop_scan(db, scan_id, reason=payload.reason)
+    return await service.stop_scan(
+        db,
+        scan_id,
+        reason=payload.reason,
+        actor_google_sub=principal.google_sub,
+        actor_email=principal.email,
+    )

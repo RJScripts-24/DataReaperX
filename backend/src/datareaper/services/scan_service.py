@@ -38,11 +38,37 @@ class ScanService:
     def __init__(self) -> None:
         self.scan_repo = ScanRepository()
 
-    async def get_status(self, session: AsyncSession | None, scan_id: str) -> dict:
-        return await self.scan_repo.get_scan(session, scan_id)
+    async def get_status(
+        self,
+        session: AsyncSession | None,
+        scan_id: str,
+        *,
+        actor_google_sub: str | None = None,
+        actor_email: str | None = None,
+    ) -> dict:
+        return await self.scan_repo.get_scan(
+            session,
+            scan_id,
+            actor_google_sub=actor_google_sub,
+            actor_email=actor_email,
+        )
 
-    async def stop_scan(self, session: AsyncSession | None, scan_id: str, reason: str | None = None) -> dict:
-        stopped = await self.scan_repo.stop_scan(session, scan_id, reason=reason)
+    async def stop_scan(
+        self,
+        session: AsyncSession | None,
+        scan_id: str,
+        reason: str | None = None,
+        *,
+        actor_google_sub: str | None = None,
+        actor_email: str | None = None,
+    ) -> dict:
+        stopped = await self.scan_repo.stop_scan(
+            session,
+            scan_id,
+            reason=reason,
+            actor_google_sub=actor_google_sub,
+            actor_email=actor_email,
+        )
         cancelled_job_ids = await _cancel_queued_jobs(scan_id)
         await publish(
             f"scan:{scan_id}",

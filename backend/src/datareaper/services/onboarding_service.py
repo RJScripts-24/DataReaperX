@@ -92,17 +92,19 @@ class OnboardingService:
         session: AsyncSession,
         normalized_seed: str,
         seed_type: str,
+        owner_google_sub: str | None,
     ) -> ScanJob | None:
-        rows = await session.execute(
+        stmt = (
             select(ScanJob)
             .join(Seed, ScanJob.seed_id == Seed.id)
             .where(
                 Seed.normalized_value == normalized_seed,
                 Seed.seed_type == seed_type,
             )
-            .order_by(ScanJob.updated_at.desc(), ScanJob.created_at.desc())
-            .limit(1)
         )
+        if owner_google_sub:
+            stmt = stmt.where(ScanJob.owner_google_sub == owner_google_sub)
+        rows = await session.execute(stmt.order_by(ScanJob.updated_at.desc(), ScanJob.created_at.desc()).limit(1))
         return rows.scalars().first()
 
     async def _reuse_existing_scan_if_available(
@@ -112,8 +114,11 @@ class OnboardingService:
         seed_type: str,
         jurisdiction: str,
         seed_count: int,
+        owner_google_sub: str | None,
     ) -> dict | None:
-        existing_scan = await self._find_latest_scan_for_seed(session, normalized_seed, seed_type)
+        existing_scan = await self._find_latest_scan_for_seed(
+            session, normalized_seed, seed_type, owner_google_sub
+        )
         if existing_scan is None:
             return None
 
@@ -248,6 +253,7 @@ class OnboardingService:
         seeds: list[str],
         seed_type: str,
         jurisdiction: str,
+        owner_google_sub: str | None = None,
     ) -> dict:
         started = perf_counter()
         logger.info(
@@ -294,6 +300,7 @@ class OnboardingService:
             seed_type=resolved_seed_type,
             jurisdiction=jurisdiction,
             seed_count=len(normalized_seeds),
+            owner_google_sub=owner_google_sub,
         )
         if reused is not None:
             logger.info(
@@ -307,6 +314,8 @@ class OnboardingService:
         scan_id = new_id("scan")
         bundle = self.supervisor.build_scan_bundle(scan_id, normalized_seed, resolved_seed_type, jurisdiction)
         bundle["scan"]["all_seeds"] = normalized_seeds
+        if owner_google_sub:
+            bundle["scan"]["owner_google_sub"] = owner_google_sub
         logger.info(
             "onboarding_initialize_bundle_built",
             scan_id=scan_id,
