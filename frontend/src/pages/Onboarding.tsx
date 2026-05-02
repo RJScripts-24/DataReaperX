@@ -125,7 +125,7 @@ export default function Onboarding() {
           return;
         }
         setGoogleClientId("");
-        setErrorMessage("Google OAuth is not configured on backend yet. Add GMAIL_CLIENT_ID and retry.");
+        setErrorMessage("Google OAuth is not configured on backend yet. Add GOOGLE_CLIENT_ID and retry.");
       })
       .catch(() => {
         if (!isMounted) {

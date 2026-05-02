@@ -554,50 +554,6 @@ export default function CommandCenter() {
     };
   }, [backendProgress, displayProgress]);
 
-  const hoveredRadarDot = useMemo(
-    () => radarTargets.find((target) => target.id === hoveredRadarDotId) ?? null,
-    [hoveredRadarDotId, radarTargets]
-  );
-
-  useEffect(() => {
-    if (!hoveredRadarDotId) {
-      return;
-    }
-    const stillExists = radarTargets.some((target) => target.id === hoveredRadarDotId);
-    if (!stillExists) {
-      setHoveredRadarDotId(null);
-    }
-  }, [hoveredRadarDotId, radarTargets]);
-
-  useEffect(() => {
-    if (!isRadarExpanded) {
-      return;
-    }
-    if (!hoveredRadarDot && radarTargets.length > 0) {
-      setHoveredRadarDotId(radarTargets[0]?.id ?? null);
-    }
-  }, [hoveredRadarDot, isRadarExpanded, radarTargets]);
-
-  if (!scanId && scanPending) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: COLORS.bg }}>
-        <div className="hand-drawn-card px-8 py-6" style={{ backgroundColor: "#fdfbf7" }}>
-          <PressureText
-            as="p"
-            className="paper-text"
-            style={{ fontFamily: "'Patrick Hand', cursive", fontSize: 18 }}
-          >
-            Initializing your scan... This usually takes a few seconds.
-          </PressureText>
-        </div>
-      </div>
-    );
-  }
-
-  if (!scanId) {
-    return null;
-  }
-
   const statusLabel =
     isStopped
       ? "STOPPED"
@@ -630,6 +586,10 @@ export default function CommandCenter() {
     { email: 0, phone: 0, location: 0 } as Record<"email" | "phone" | "location", number>
   );
 
+  const hoveredRadarDot = useMemo(
+    () => radarTargets.find((target) => target.id === hoveredRadarDotId) ?? null,
+    [hoveredRadarDotId, radarTargets]
+  );
 
   useEffect(() => {
     if (!isRadarExpanded && !isFeedExpanded) {
@@ -829,6 +789,10 @@ export default function CommandCenter() {
       )}
     </div>
   );
+
+  if (!scanId) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen relative w-full overflow-x-hidden pb-8" style={{ backgroundColor: COLORS.bg }}>

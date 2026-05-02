@@ -47,6 +47,8 @@ class Settings(BaseSettings):
     shield_api_base: str = "http://localhost:8000/api"
     proxycurl_api_key: str = ""
     default_jurisdiction: str = "DPDP"
+    google_client_id: str = ""
+    google_client_secret: str = ""
     gmail_client_id: str = ""
     gmail_client_secret: str = ""
     gmail_refresh_token: str = ""

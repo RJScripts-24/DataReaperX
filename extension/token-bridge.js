@@ -6,6 +6,11 @@
 // ============================================================================
 
 (function () {
+  if (window.__DR_TOKEN_BRIDGE_ACTIVE__) {
+    return;
+  }
+  window.__DR_TOKEN_BRIDGE_ACTIVE__ = true;
+
   const MAX_RETRIES = 15;
   const RETRY_INTERVAL_MS = 400;
   let attempts = 0;
@@ -37,7 +42,9 @@
   function tryRegisterToken() {
     if (registered) return;
 
-    const token = window.__DR_SHIELD_TOKEN__;
+    const pageToken = window.__DR_SHIELD_TOKEN__;
+    const sessionToken = sessionStorage.getItem("dr_shield_token");
+    const token = pageToken || sessionToken;
     if (token && String(token).trim().length > 0) {
       sendToken(String(token).trim());
       return;

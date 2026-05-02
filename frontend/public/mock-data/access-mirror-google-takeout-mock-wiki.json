@@ -1,0 +1,112 @@
+{
+  "platform": "Google",
+  "export_type": "takeout_mock_reference_sites",
+  "generated_at": "2026-05-03T07:45:00Z",
+  "account": {
+    "email": "test.user+researchmirror@example.net",
+    "account_created": "2022-02-11",
+    "region": "US",
+    "devices_linked": [
+      "ThinkPad X1",
+      "iPad Air",
+      "Pixel Tablet"
+    ]
+  },
+  "retention_summary": {
+    "years_of_data": 3,
+    "activity_events": 12,
+    "location_events": 5,
+    "ad_interest_topics": 119,
+    "uploaded_contacts": 83
+  },
+  "timeline": [
+    {
+      "year": "2023",
+      "event": "Reference-site browsing profile began building",
+      "severity": "medium"
+    },
+    {
+      "year": "2024",
+      "event": "Cross-device activity retention expanded",
+      "severity": "high"
+    },
+    {
+      "year": "2025",
+      "event": "Third-party research app grants increased",
+      "severity": "high"
+    },
+    {
+      "year": "2026",
+      "event": "Archive includes broader knowledge-site traces",
+      "severity": "low"
+    }
+  ],
+  "authorized_apps": [
+    {
+      "app": "Wikimedia Commons Uploader",
+      "granted_date": "2024-06-14",
+      "source": "signin",
+      "scopes": [
+        "email",
+        "profile",
+        "cloud_storage.read"
+      ],
+      "risk": "LOW"
+    },
+    {
+      "app": "OpenLibrary Reading Sync",
+      "granted_date": "2025-01-09",
+      "source": "signin",
+      "scopes": [
+        "email",
+        "profile",
+        "contacts.readonly"
+      ],
+      "risk": "LOW"
+    },
+    {
+      "app": "Archive Research Workspace",
+      "granted_date": "2025-10-02",
+      "source": "signin",
+      "scopes": [
+        "drive.readonly",
+        "calendar.readonly"
+      ],
+      "risk": "MEDIUM"
+    },
+    {
+      "app": "Britannica Study Planner",
+      "granted_date": "2026-02-11",
+      "source": "signin",
+      "scopes": [
+        "email",
+        "profile"
+      ],
+      "risk": "LOW"
+    },
+    {
+      "app": "Wikidata Query Notebook",
+      "granted_date": "2026-03-23",
+      "source": "signin",
+      "scopes": [
+        "email",
+        "profile",
+        "drive.readonly"
+      ],
+      "risk": "MEDIUM"
+    }
+  ],
+  "third_parties": [
+    "Wikimedia Foundation",
+    "Internet Archive",
+    "Encyclopaedia Britannica",
+    "Open Library",
+    "JSTOR"
+  ],
+  "recommendations_seed": [
+    "Review and revoke stale research-app grants",
+    "Reduce long-term activity retention",
+    "Trim inactive devices from account history",
+    "Delete old location timeline entries"
+  ]
+}

@@ -12,6 +12,8 @@ async def main() -> None:
 	settings = get_settings()
 	seed = "smoke@email.com"
 
+	owner_sub = "smoke-test-google-sub"
+
 	if SessionLocal is None:
 		payload = await DashboardService().get_dashboard(None, "smoke")
 		print(payload)
@@ -23,9 +25,15 @@ async def main() -> None:
 			seeds=[seed],
 			seed_type="email",
 			jurisdiction="DPDP",
+			owner_google_sub=owner_sub,
 		)
 		scan_id = initialized["scan_id"]
-		payload = await DashboardService().get_dashboard(session, scan_id)
+		payload = await DashboardService().get_dashboard(
+			session,
+			scan_id,
+			actor_google_sub=owner_sub,
+			actor_email=seed,
+		)
 		print(payload)
 
 
