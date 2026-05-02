@@ -772,6 +772,14 @@ export default function CommandCenter() {
             >
               Identity Graph
             </button>
+            <button
+              onClick={() => navigate("/access-mirror")}
+              className="text-xl pencil-text transition-colors opacity-60 hover:opacity-100"
+              data-reaper-expression="surprised"
+              data-reaper-phrases="Cutting off third-party access. Feels good.||Let's see what they actually know about you.||Time to audit the damage."
+            >
+              Access Mirror
+            </button>
           </div>
 
           <div className="flex items-center gap-3">

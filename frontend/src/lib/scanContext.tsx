@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router";
+import { getAuthSession } from "./sessionManager";
 
 const ACTIVE_SCAN_STORAGE_KEY = "dr_active_scan_id";
 
@@ -55,12 +56,31 @@ export function useRequireScan(): string | null {
   const { scanId } = useScanContext();
   const navigate = useNavigate();
   const location = useLocation();
+  const session = getAuthSession();
 
   useEffect(() => {
+    if (!session) {
+      navigate("/onboarding", { replace: true, state: { from: location.pathname } });
+      return;
+    }
     if (!scanId) {
       navigate("/onboarding", { replace: true, state: { from: location.pathname } });
     }
-  }, [scanId, navigate, location.pathname]);
+  }, [location.pathname, navigate, scanId, session]);
 
-  return scanId;
+  return session ? scanId : null;
+}
+
+export function useRequireAuth(): string | null {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const session = getAuthSession();
+
+  useEffect(() => {
+    if (!session) {
+      navigate("/onboarding", { replace: true, state: { from: location.pathname } });
+    }
+  }, [location.pathname, navigate, session]);
+
+  return session?.email ?? null;
 }

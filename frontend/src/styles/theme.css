@@ -271,6 +271,18 @@
   box-shadow: 1px 1px 0px rgba(0, 0, 0, 0.5) !important;
 }
 
+.hand-drawn-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  scrollbar-gutter: stable;
+}
+
+.hand-drawn-scrollbar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
 .pencil-fill-dark {
   background: repeating-linear-gradient(45deg,
       rgba(66, 70, 94, 0.95),

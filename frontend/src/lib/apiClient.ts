@@ -31,6 +31,13 @@ export class ApiClientError extends Error implements ApiErrorShape {
 }
 
 const SESSION_STORAGE_KEY = "dr_session_id";
+const SESSION_STORAGE_KEYS = [
+  "dr_session_id",
+  "dr_session_email",
+  "dr_session_google_sub",
+  "dr_session_expires_at",
+  "dr_active_scan_id",
+];
 
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000",
@@ -89,7 +96,14 @@ function normalizeApiError(error: AxiosError): ApiClientError {
 
 apiClient.interceptors.response.use(
   (response) => response,
-  (error: AxiosError) => Promise.reject(normalizeApiError(error))
+  (error: AxiosError) => {
+    if (error.response?.status === 401 && typeof window !== "undefined") {
+      for (const key of SESSION_STORAGE_KEYS) {
+        sessionStorage.removeItem(key);
+      }
+    }
+    return Promise.reject(normalizeApiError(error));
+  }
 );
 
 export default apiClient;

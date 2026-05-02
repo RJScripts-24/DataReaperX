@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     supabase_key: str = ""
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/postgres"
     sync_database_url: str = "postgresql+psycopg://postgres:postgres@localhost:5432/postgres"
-    redis_url: str = "redis://localhost:6379/0"
+    redis_url: str = "redis://127.0.0.1:6379/0"
     arq_redis_url: str = ""
     llm_provider: str = "groq"
     groq_model: str = "llama-3.3-70b-versatile"
