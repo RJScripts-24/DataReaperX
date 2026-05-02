@@ -1,0 +1,5 @@
+﻿selectors:
+  listing_card: ".result-card"
+  name: ".result-name"
+  location: ".result-location"
+  company: ".result-company"

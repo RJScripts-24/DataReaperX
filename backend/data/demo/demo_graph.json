@@ -1,0 +1,15 @@
+﻿{
+  "nodes": [
+    {"id": "seed", "type": "seed", "label": "user@email.com", "x": 400, "y": 300, "data": {"kind": "seed"}},
+    {"id": "github", "type": "platform", "label": "GitHub", "x": 250, "y": 200, "data": {"platform": "GitHub"}},
+    {"id": "username1", "type": "username", "label": "johndoe_dev", "x": 150, "y": 250, "data": {"platform": "GitHub"}},
+    {"id": "identity1", "type": "identity", "label": "John Doe", "x": 200, "y": 400, "data": {"location": "Bangalore", "company": "Tech Corp"}},
+    {"id": "target1", "type": "target", "label": "Apollo.io", "x": 150, "y": 500, "data": {"status": "Deletion Pending"}}
+  ],
+  "edges": [
+    {"source": "seed", "target": "github", "relationship": "pivoted_to"},
+    {"source": "github", "target": "username1", "relationship": "discovered_username"},
+    {"source": "username1", "target": "identity1", "relationship": "resolved_identity"},
+    {"source": "identity1", "target": "target1", "relationship": "found_on_broker"}
+  ]
+}

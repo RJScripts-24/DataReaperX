@@ -1,0 +1,32 @@
+﻿{
+  "targets": [
+    {
+      "id": "1",
+      "brokerName": "Apollo.io",
+      "status": "illegal",
+      "lastActivity": "2 min ago",
+      "messageCount": 5,
+      "dataTypes": ["Email", "Phone", "Company"],
+      "conversation": [
+        {"id": "m1", "type": "agent", "content": "Requesting deletion under the DPDP Act.", "timestamp": "10:23 AM", "metadata": {}},
+        {"id": "m2", "type": "broker", "content": "Please send government ID.", "timestamp": "10:45 AM", "metadata": {}},
+        {"id": "m3", "type": "system", "content": "Intent classified: Illegal Data Request", "timestamp": "10:45 AM", "metadata": {"classification": "Violation"}},
+        {"id": "m4", "type": "agent", "content": "Your request violates data minimization principles under Section 6.", "timestamp": "10:47 AM", "metadata": {"legalCitation": "Section 6, DPDP Act 2023"}},
+        {"id": "m5", "type": "broker", "content": "We are reviewing your request.", "timestamp": "11:12 AM", "metadata": {}}
+      ]
+    },
+    {
+      "id": "2",
+      "brokerName": "Spokeo",
+      "status": "stalling",
+      "lastActivity": "15 min ago",
+      "messageCount": 3,
+      "dataTypes": ["Phone", "Address"],
+      "conversation": [
+        {"id": "m1", "type": "agent", "content": "Request for data deletion.", "timestamp": "9:30 AM", "metadata": {}},
+        {"id": "m2", "type": "broker", "content": "Please allow 4-6 weeks.", "timestamp": "10:15 AM", "metadata": {}},
+        {"id": "m3", "type": "system", "content": "Intent classified: Stalling", "timestamp": "10:15 AM", "metadata": {"classification": "Delay"}}
+      ]
+    }
+  ]
+}

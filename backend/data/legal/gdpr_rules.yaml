@@ -1,0 +1,8 @@
+﻿jurisdiction: GDPR
+statutory_deadline_days: 30
+citations:
+  erasure: Article 17
+  minimization: Article 5(1)(c)
+escalation_triggers:
+  illegal_pushback: refuse_and_escalate
+  excessive_delay: remind_statutory_deadline

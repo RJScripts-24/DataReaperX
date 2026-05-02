@@ -1,0 +1,8 @@
+﻿jurisdiction: DPDP
+statutory_deadline_days: 30
+citations:
+  consent: Section 6
+  erasure: Section 12
+escalation_triggers:
+  illegal_pushback: refuse_and_escalate
+  excessive_delay: remind_statutory_deadline

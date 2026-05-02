@@ -1,0 +1,371 @@
+﻿brokers:
+  - name: Whitepages
+    search_url: "https://www.whitepages.com/name/{name}"
+    opt_out_email: "support@whitepages.com"
+    opt_out_url: "https://www.whitepages.com/suppression_requests/new"
+    jurisdictions: [GDPR, CCPA, DPDP]
+    data_types: [name, address, phone, relatives]
+
+  - name: Spokeo
+    search_url: "https://www.spokeo.com/{name}"
+    opt_out_email: "privacy@spokeo.com"
+    opt_out_url: "https://www.spokeo.com/optout"
+    jurisdictions: [CCPA]
+    data_types: [name, address, phone, email]
+
+  - name: ZoomInfo
+    search_url: "https://www.zoominfo.com/p/{name}"
+    opt_out_email: "privacy@zoominfo.com"
+    opt_out_url: "https://www.zoominfo.com/business/login"
+    jurisdictions: [GDPR, CCPA]
+    data_types: [email, phone, employer, role]
+
+  - name: Apollo.io
+    search_url: "https://app.apollo.io/#/people?q_person_name={name}"
+    opt_out_email: "privacy@apollo.io"
+    opt_out_url: "https://www.apollo.io/privacy-policy"
+    jurisdictions: [GDPR, CCPA]
+    data_types: [email, phone, company]
+
+  - name: BeenVerified
+    search_url: "https://www.beenverified.com/people/{name}"
+    opt_out_email: "support@beenverified.com"
+    opt_out_url: "https://www.beenverified.com/app/optout/search"
+    jurisdictions: [CCPA]
+    data_types: [name, address, phone, relatives, criminal]
+
+  - name: Intelius
+    search_url: "https://www.intelius.com/people-search/{name}"
+    opt_out_email: "privacy@intelius.com"
+    opt_out_url: "https://www.intelius.com/opt-out"
+    jurisdictions: [CCPA]
+    data_types: [name, address, phone, relatives]
+
+  - name: TruthFinder
+    search_url: "https://www.truthfinder.com/people-search/?firstName={name}"
+    opt_out_email: "support@truthfinder.com"
+    opt_out_url: "https://www.truthfinder.com/opt-out"
+    jurisdictions: [CCPA]
+    data_types: [name, address, phone, criminal, social]
+
+  - name: Radaris
+    search_url: "https://radaris.com/p/{name}"
+    opt_out_email: "privacy@radaris.com"
+    opt_out_url: "https://radaris.com/control/privacy"
+    jurisdictions: [GDPR, CCPA]
+    data_types: [name, address, relatives, social]
+
+  - name: MyLife
+    search_url: "https://www.mylife.com/find-people/{name}"
+    opt_out_email: "privacy@mylife.com"
+    opt_out_url: "https://www.mylife.com/ccpa/index.pubview"
+    jurisdictions: [CCPA]
+    data_types: [name, address, phone, reputation]
+
+  - name: PeopleFinder
+    search_url: "https://www.peoplefinder.com/people/{name}"
+    opt_out_email: "optout@peoplefinder.com"
+    opt_out_url: "https://www.peoplefinder.com/optout.php"
+    jurisdictions: [CCPA]
+    data_types: [name, address, phone]
+
+  - name: FastPeopleSearch
+    search_url: "https://www.fastpeoplesearch.com/name/{name}"
+    opt_out_email: "privacy@fastpeoplesearch.com"
+    opt_out_url: "https://www.fastpeoplesearch.com/removal"
+    jurisdictions: [CCPA]
+    data_types: [name, address, phone, relatives]
+
+  - name: CheckPeople
+    search_url: "https://www.checkpeople.com/people/{name}"
+    opt_out_email: "privacy@checkpeople.com"
+    opt_out_url: "https://www.checkpeople.com/optout"
+    jurisdictions: [CCPA]
+    data_types: [name, address, phone, criminal]
+
+  - name: PublicRecordsNow
+    search_url: "https://www.publicrecordsnow.com/find/{name}"
+    opt_out_email: "privacy@publicrecordsnow.com"
+    opt_out_url: "https://www.publicrecordsnow.com/optout"
+    jurisdictions: [CCPA]
+    data_types: [name, address, criminal, court]
+
+  - name: USSearch
+    search_url: "https://www.ussearch.com/search/people/?fname={name}"
+    opt_out_email: "privacy@ussearch.com"
+    opt_out_url: "https://www.ussearch.com/opt-out/"
+    jurisdictions: [CCPA]
+    data_types: [name, address, phone]
+
+  - name: PeopleSmartUS
+    search_url: "https://www.peoplesmart.com/people-search/{name}"
+    opt_out_email: "privacy@peoplesmart.com"
+    opt_out_url: "https://www.peoplesmart.com/optout-go"
+    jurisdictions: [CCPA]
+    data_types: [name, address, phone]
+
+  - name: Pipl
+    search_url: "https://pipl.com/search/?q={name}"
+    opt_out_email: "privacy@pipl.com"
+    opt_out_url: "https://pipl.com/personal-information-removal-request/"
+    jurisdictions: [GDPR, CCPA]
+    data_types: [name, email, phone, social, employer]
+
+  - name: Clearbit
+    search_url: "https://clearbit.com/lookup/{name}"
+    opt_out_email: "privacy@clearbit.com"
+    opt_out_url: "https://clearbit.com/privacy"
+    jurisdictions: [GDPR, CCPA]
+    data_types: [email, company, role]
+
+  - name: Hunter.io
+    search_url: "https://hunter.io/find/{name}"
+    opt_out_email: "privacy@hunter.io"
+    opt_out_url: "https://hunter.io/privacy"
+    jurisdictions: [GDPR, CCPA]
+    data_types: [email, employer]
+
+  - name: Lusha
+    search_url: "https://www.lusha.com/find/{name}"
+    opt_out_email: "privacy@lusha.com"
+    opt_out_url: "https://www.lusha.com/privacy-policy"
+    jurisdictions: [GDPR, CCPA]
+    data_types: [email, phone, employer]
+
+  - name: RocketReach
+    search_url: "https://rocketreach.co/person-search?name={name}"
+    opt_out_email: "privacy@rocketreach.co"
+    opt_out_url: "https://rocketreach.co/privacy"
+    jurisdictions: [GDPR, CCPA]
+    data_types: [email, phone, social, employer]
+
+  - name: ContactOut
+    search_url: "https://contactout.com/search?name={name}"
+    opt_out_email: "privacy@contactout.com"
+    opt_out_url: "https://contactout.com/privacy"
+    jurisdictions: [GDPR, CCPA]
+    data_types: [email, phone]
+
+  - name: Snov.io
+    search_url: "https://app.snov.io/domain-search?name={name}"
+    opt_out_email: "privacy@snov.io"
+    opt_out_url: "https://snov.io/privacy-policy"
+    jurisdictions: [GDPR]
+    data_types: [email, employer]
+
+  - name: PeopleLooker
+    search_url: "https://www.peoplelooker.com/find/people/{name}"
+    opt_out_email: "support@peoplelooker.com"
+    opt_out_url: "https://www.peoplelooker.com/f/optout/search"
+    jurisdictions: [CCPA]
+    data_types: [name, address, phone, relatives]
+
+  - name: InstantCheckmate
+    search_url: "https://www.instantcheckmate.com/people/{name}"
+    opt_out_email: "support@instantcheckmate.com"
+    opt_out_url: "https://www.instantcheckmate.com/opt-out/"
+    jurisdictions: [CCPA]
+    data_types: [name, address, phone, criminal]
+
+  - name: FamilyTreeNow
+    search_url: "https://www.familytreenow.com/search/genealogy/results?first={name}"
+    opt_out_email: "optout@familytreenow.com"
+    opt_out_url: "https://www.familytreenow.com/optout"
+    jurisdictions: [CCPA]
+    data_types: [name, address, relatives, age]
+
+  - name: AnyWho
+    search_url: "https://www.anywho.com/people/{name}"
+    opt_out_email: "privacy@anywho.com"
+    opt_out_url: "https://www.anywho.com/teldir/optout"
+    jurisdictions: [CCPA]
+    data_types: [name, address, phone]
+
+  - name: ArrestFacts
+    search_url: "https://arrestfacts.com/{name}"
+    opt_out_email: "privacy@arrestfacts.com"
+    opt_out_url: "https://arrestfacts.com/ng/control/privacy"
+    jurisdictions: [CCPA]
+    data_types: [name, address, criminal]
+
+  - name: Mugshots.com
+    search_url: "https://mugshots.com/search.html?q={name}"
+    opt_out_email: "optout@mugshots.com"
+    opt_out_url: "https://mugshots.com/removal.html"
+    jurisdictions: [CCPA]
+    data_types: [name, photo, criminal]
+
+  - name: BustedMugshots
+    search_url: "https://bustedmugshots.com/search?n={name}"
+    opt_out_email: "privacy@bustedmugshots.com"
+    opt_out_url: "https://bustedmugshots.com/removal"
+    jurisdictions: [CCPA]
+    data_types: [name, photo, criminal]
+
+  - name: PeekYou
+    search_url: "https://www.peekyou.com/{name}"
+    opt_out_email: "privacy@peekyou.com"
+    opt_out_url: "https://www.peekyou.com/about/contact/optout/"
+    jurisdictions: [CCPA, GDPR]
+    data_types: [name, social, address, phone]
+
+  - name: PrivateEye
+    search_url: "https://www.privateeye.com/people/{name}"
+    opt_out_email: "privacy@privateeye.com"
+    opt_out_url: "https://www.privateeye.com/static/view/optout/"
+    jurisdictions: [CCPA]
+    data_types: [name, address, phone, criminal]
+
+  - name: Addresses.com
+    search_url: "https://www.addresses.com/people/{name}"
+    opt_out_email: "privacy@addresses.com"
+    opt_out_url: "https://www.addresses.com/optout.php"
+    jurisdictions: [CCPA]
+    data_types: [name, address, phone]
+
+  - name: Wink
+    search_url: "https://www.wink.com/people/{name}"
+    opt_out_email: "optout@wink.com"
+    opt_out_url: "https://www.wink.com/help/optout"
+    jurisdictions: [CCPA]
+    data_types: [name, address, social]
+
+  - name: InfoTracer
+    search_url: "https://infotracer.com/people-search/?name={name}"
+    opt_out_email: "optout@infotracer.com"
+    opt_out_url: "https://infotracer.com/optout/"
+    jurisdictions: [CCPA]
+    data_types: [name, address, phone, criminal]
+
+  - name: VoterRecords.com
+    search_url: "https://voterrecords.com/voters/{name}"
+    opt_out_email: "privacy@voterrecords.com"
+    opt_out_url: "https://voterrecords.com/faq"
+    jurisdictions: [CCPA]
+    data_types: [name, address, political]
+
+  - name: SearchPeopleFree
+    search_url: "https://www.searchpeoplefree.com/find/{name}"
+    opt_out_email: "privacy@searchpeoplefree.com"
+    opt_out_url: "https://www.searchpeoplefree.com/opt-out"
+    jurisdictions: [CCPA]
+    data_types: [name, address, phone]
+
+  - name: NumberGuru
+    search_url: "https://www.numberguru.com/"
+    opt_out_email: "privacy@numberguru.com"
+    opt_out_url: "https://www.numberguru.com/optout"
+    jurisdictions: [CCPA]
+    data_types: [phone, name, address]
+
+  - name: Nuwber
+    search_url: "https://nuwber.com/people/{name}"
+    opt_out_email: "privacy@nuwber.com"
+    opt_out_url: "https://nuwber.com/removal/link"
+    jurisdictions: [CCPA, GDPR]
+    data_types: [name, address, phone, email, relatives]
+
+  - name: ClustrMaps
+    search_url: "https://clustrmaps.com/person/{name}"
+    opt_out_email: "privacy@clustrmaps.com"
+    opt_out_url: "https://clustrmaps.com/bl/opt-out"
+    jurisdictions: [GDPR, CCPA]
+    data_types: [name, address, relatives, social]
+
+  - name: Xlek
+    search_url: "https://xlek.com/search_result.php?name={name}"
+    opt_out_email: "privacy@xlek.com"
+    opt_out_url: "https://xlek.com/optout.php"
+    jurisdictions: [CCPA]
+    data_types: [name, address, phone]
+
+  - name: ThatsThem
+    search_url: "https://thatsthem.com/name/{name}"
+    opt_out_email: "optout@thatsthem.com"
+    opt_out_url: "https://thatsthem.com/optout"
+    jurisdictions: [CCPA]
+    data_types: [name, address, email, phone, ip]
+
+  - name: Dataveria
+    search_url: "https://www.dataveria.com/profile/search?fname={name}"
+    opt_out_email: "privacy@dataveria.com"
+    opt_out_url: "https://www.dataveria.com/profile/search?fname={name}"
+    jurisdictions: [CCPA]
+    data_types: [name, address, phone]
+
+  - name: FinderSpy
+    search_url: "https://www.finderspy.com/people/{name}"
+    opt_out_email: "privacy@finderspy.com"
+    opt_out_url: "https://www.finderspy.com/optout"
+    jurisdictions: [CCPA]
+    data_types: [name, address, phone]
+
+  - name: USPhoneBook
+    search_url: "https://www.usphonebook.com/{name}"
+    opt_out_email: "optout@usphonebook.com"
+    opt_out_url: "https://www.usphonebook.com/opt-out"
+    jurisdictions: [CCPA]
+    data_types: [name, address, phone]
+
+  - name: OfficialUSA
+    search_url: "https://www.officialusa.com/names/{name}"
+    opt_out_email: "privacy@officialusa.com"
+    opt_out_url: "https://www.officialusa.com/optout/"
+    jurisdictions: [CCPA]
+    data_types: [name, address, phone]
+
+  - name: PeopleByName
+    search_url: "https://www.peoplebyname.com/people/{name}"
+    opt_out_email: "optout@peoplebyname.com"
+    opt_out_url: "https://www.peoplebyname.com/remove.php"
+    jurisdictions: [CCPA]
+    data_types: [name, address, phone]
+
+  - name: PublicRecords360
+    search_url: "https://publicrecords360.com/{name}"
+    opt_out_email: "privacy@publicrecords360.com"
+    opt_out_url: "https://publicrecords360.com/optout.html"
+    jurisdictions: [CCPA]
+    data_types: [name, address, criminal]
+
+  - name: CallerSmart
+    search_url: "https://www.callersmart.com/lookup/{name}"
+    opt_out_email: "privacy@callersmart.com"
+    opt_out_url: "https://www.callersmart.com/opt-out"
+    jurisdictions: [CCPA]
+    data_types: [phone, name, address]
+
+  - name: CocoFinder
+    search_url: "https://cocofinder.com/people/{name}"
+    opt_out_email: "privacy@cocofinder.com"
+    opt_out_url: "https://cocofinder.com/optout"
+    jurisdictions: [CCPA]
+    data_types: [name, address, phone]
+
+  - name: ZabaSearch
+    search_url: "https://www.zabasearch.com/people/{name}"
+    opt_out_email: "privacy@zabasearch.com"
+    opt_out_url: "https://www.zabasearch.com/block_records/"
+    jurisdictions: [CCPA]
+    data_types: [name, address, phone]
+
+  - name: PeopleSearchNow
+    search_url: "https://peoplesearchnow.com/search/{name}"
+    opt_out_email: "privacy@peoplesearchnow.com"
+    opt_out_url: "https://peoplesearchnow.com/optout"
+    jurisdictions: [CCPA]
+    data_types: [name, address, phone]
+
+  - name: SmartBackgroundChecks
+    search_url: "https://www.smartbackgroundchecks.com/people/{name}"
+    opt_out_email: "privacy@smartbackgroundchecks.com"
+    opt_out_url: "https://www.smartbackgroundchecks.com/opt-out"
+    jurisdictions: [CCPA]
+    data_types: [name, address, phone, relatives]
+
+  - name: SpyFly
+    search_url: "https://www.spyfly.com/people/{name}"
+    opt_out_email: "support@spyfly.com"
+    opt_out_url: "https://www.spyfly.com/opt-out"
+    jurisdictions: [CCPA]
+    data_types: [name, address, phone, criminal]

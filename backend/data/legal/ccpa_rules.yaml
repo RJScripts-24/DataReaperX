@@ -1,0 +1,8 @@
+﻿jurisdiction: CCPA
+statutory_deadline_days: 45
+citations:
+  deletion: Section 1798.105
+  disclosure: Section 1798.110
+escalation_triggers:
+  illegal_pushback: refuse_and_escalate
+  excessive_delay: remind_statutory_deadline

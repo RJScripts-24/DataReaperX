@@ -1,0 +1,4 @@
+﻿selectors:
+  profile_name: ".profile-name"
+  profile_bio: ".profile-bio"
+  profile_location: ".profile-location"

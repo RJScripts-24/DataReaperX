@@ -1,0 +1,59 @@
+name: Deploy Backend to Hugging Face Space
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - backend/**
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      HF_SPACE_REPO: your-username/your-space-name
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate Space target
+        run: |
+          if [ "${HF_SPACE_REPO}" = "your-username/your-space-name" ]; then
+            echo "Set HF_SPACE_REPO in this workflow (or move it to a repository variable)."
+            exit 1
+          fi
+
+      - name: Push backend to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          rm -rf hf-space
+          git clone "https://user:${HF_TOKEN}@huggingface.co/spaces/${HF_SPACE_REPO}" hf-space
+
+          rsync -av --delete \
+            --exclude ".git/" \
+            --exclude "frontend/" \
+            --exclude ".env" \
+            --exclude ".env.*" \
+            backend/ hf-space/
+
+          cd hf-space
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "No deployment changes detected."
+            exit 0
+          fi
+
+          git commit -m "Deploy backend from ${GITHUB_REPOSITORY}@${GITHUB_SHA}"
+          git push origin main

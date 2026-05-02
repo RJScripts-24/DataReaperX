@@ -1,0 +1,7 @@
+﻿escalations:
+  illegal_id_request:
+    severity: high
+    action: refuse_and_escalate
+  excessive_delay:
+    severity: medium
+    action: remind_statutory_deadline

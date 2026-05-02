@@ -1,0 +1,82 @@
+{
+  "input": {
+    "email": "harshsinghal1972@gmail.com",
+    "username": "NA0XY"
+  },
+  "accounts_from_email": [],
+  "usernames_from_graph": [
+    "harshsinghal.harshsinghal",
+    "harshsinghal1972",
+    "harshsinghalharshsinghal",
+    "harshsinghalharshsinghal1972",
+    "na0xy",
+    "na0xy.na0xy",
+    "na0xyna0xy"
+  ],
+  "manual_profile_checks": [
+    {
+      "url": "https://github.com/NA0XY",
+      "status": 200,
+      "error": null,
+      "contains_username": true
+    },
+    {
+      "url": "https://x.com/NA0XY",
+      "status": 200,
+      "error": null,
+      "contains_username": true
+    },
+    {
+      "url": "https://www.instagram.com/NA0XY/",
+      "status": 200,
+      "error": null,
+      "contains_username": true
+    },
+    {
+      "url": "https://www.reddit.com/user/NA0XY/",
+      "status": 0,
+      "error": "Page.content: Unable to retrieve content because the page is navigating and changing the content.",
+      "contains_username": false
+    },
+    {
+      "url": "https://www.tiktok.com/@NA0XY",
+      "status": 200,
+      "error": null,
+      "contains_username": false
+    },
+    {
+      "url": "https://www.linkedin.com/in/NA0XY",
+      "status": 0,
+      "error": "Page.content: Unable to retrieve content because the page is navigating and changing the content.",
+      "contains_username": false
+    }
+  ],
+  "osint_loop": {
+    "accounts_count": 0,
+    "usernames_count": 7,
+    "urls_count": 0,
+    "profiles_count": 0,
+    "identity": {
+      "real_name": null,
+      "location": null,
+      "employer": null
+    },
+    "boot_log": [
+      "Depth 1: scanning 2 identifier(s) across OSINT layers.",
+      "Layer 1 (holehe): discovered 0 new account record(s).",
+      "Layer 2 (search probe): discovered 0 new URL(s).",
+      "Layer 3 (smart scraper): analyzed 0 new profile page(s).",
+      "Depth 1: no fresh pivots discovered; stopping recursion."
+    ],
+    "sample_urls": [],
+    "sample_usernames": [
+      "harshsinghal.harshsinghal",
+      "harshsinghal1972",
+      "harshsinghalharshsinghal",
+      "harshsinghalharshsinghal1972",
+      "na0xy",
+      "na0xy.na0xy",
+      "na0xyna0xy"
+    ]
+  }
+}

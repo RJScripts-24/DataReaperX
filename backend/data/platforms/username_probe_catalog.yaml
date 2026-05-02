@@ -1,0 +1,134 @@
+﻿platforms:
+  - name: github
+    url: "https://github.com/{username}"
+    positive_title: "· github"
+    negative_title: "page not found · github"
+    http_only: true
+
+  - name: telegram
+    url: "https://t.me/{username}"
+    positive_title: "telegram: contact @"
+    http_only: true
+
+  - name: instagram
+    url: "https://www.instagram.com/{username}/"
+    positive_title: "(@{username})"
+    negative_title: "sorry, this page isn't available"
+    http_only: false
+
+  - name: pinterest
+    url: "https://www.pinterest.com/{username}/"
+    positive_title: "- profile | pinterest"
+    http_only: true
+
+  - name: twitter_x
+    url: "https://x.com/{username}"
+    positive_title: "{username} on x"
+    negative_title: "this account doesn't exist"
+    http_only: false
+
+  - name: reddit
+    url: "https://www.reddit.com/user/{username}/"
+    positive_title: "u/{username}"
+    negative_title: "nobody on reddit goes by that name"
+    http_only: false
+
+  - name: linkedin
+    url: "https://www.linkedin.com/in/{username}/"
+    positive_title: "{username} | linkedin"
+    negative_title: "profile unavailable"
+    http_only: false
+
+  - name: devto
+    url: "https://dev.to/{username}"
+    positive_title: "{username} - dev community"
+    negative_title: "404: page not found"
+    http_only: true
+
+  - name: medium
+    url: "https://medium.com/@{username}"
+    positive_title: "{username} – medium"
+    negative_title: "this page doesn't exist"
+    http_only: true
+
+  - name: youtube
+    url: "https://www.youtube.com/@{username}"
+    positive_title: "- youtube"
+    negative_title: "404 not found"
+    http_only: false
+
+  - name: twitch
+    url: "https://www.twitch.tv/{username}"
+    positive_title: "{username} - twitch"
+    http_only: false
+
+  - name: gitlab
+    url: "https://gitlab.com/{username}"
+    positive_title: "· gitlab"
+    negative_title: "not found · gitlab"
+    http_only: true
+
+  - name: stackoverflow
+    url: "https://stackoverflow.com/users/{username}"
+    positive_title: "stack overflow"
+    http_only: true
+
+  - name: hackerrank
+    url: "https://www.hackerrank.com/profile/{username}"
+    positive_title: "{username} | hackerrank"
+    http_only: true
+
+  - name: leetcode
+    url: "https://leetcode.com/u/{username}/"
+    positive_title: "{username} - leetcode"
+    http_only: true
+
+  - name: behance
+    url: "https://www.behance.net/{username}"
+    positive_title: "{username} on behance"
+    http_only: true
+
+  - name: dribbble
+    url: "https://dribbble.com/{username}"
+    positive_title: "{username} on dribbble"
+    http_only: true
+
+  - name: producthunt
+    url: "https://www.producthunt.com/@{username}"
+    positive_title: "{username}'s products"
+    http_only: true
+
+  - name: substack
+    url: "https://{username}.substack.com"
+    positive_title: "substack"
+    http_only: true
+
+  - name: linktree
+    url: "https://linktr.ee/{username}"
+    positive_title: "{username} | linktree"
+    http_only: true
+
+  - name: keybase
+    url: "https://keybase.io/{username}"
+    positive_title: "{username} on keybase"
+    http_only: true
+
+  - name: npmjs
+    url: "https://www.npmjs.com/~{username}"
+    positive_title: "~{username}"
+    http_only: true
+
+  - name: pypi
+    url: "https://pypi.org/user/{username}/"
+    positive_title: "{username}"
+    http_only: true
+
+  - name: about_me
+    url: "https://about.me/{username}"
+    positive_title: "{username}"
+    http_only: true
+
+  - name: gravatar_profile
+    url: "https://gravatar.com/{username}"
+    positive_title: "{username}"
+    http_only: true

@@ -1,0 +1,13 @@
+﻿rules:
+  apollo:
+    method: email
+    jurisdiction: [DPDP, GDPR]
+  zoominfo:
+    method: webform
+    jurisdiction: [DPDP, GDPR, CCPA]
+  spokeo:
+    method: webform
+    jurisdiction: [DPDP, CCPA]
+  whitepages:
+    method: email
+    jurisdiction: [DPDP, GDPR, CCPA]

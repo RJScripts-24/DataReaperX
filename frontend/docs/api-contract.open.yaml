@@ -1,0 +1,1275 @@
+openapi: 3.1.0
+info:
+  title: DataReaper Frontend Integration API
+  version: 1.0.0
+  summary: Backend contract inferred from the current DataReaper frontend workspace.
+  description: |
+    This OpenAPI contract is derived from all active frontend pages and UI state models:
+    Landing, Onboarding, Command Center, Identity Graph, and War Room.
+
+    Purpose:
+    - Give backend a stable contract to implement for seamless frontend integration.
+    - Replace current in-memory/mock UI data with API-driven data.
+    - Standardize enums, payloads, pagination, and realtime event shape.
+
+    Notes:
+    - Current frontend has no live HTTP integration yet; this is the target contract.
+    - Realtime events are defined via HTTP bootstrap endpoint plus extension blocks.
+    - All timestamps use ISO 8601 unless explicitly noted.
+
+servers:
+  - url: https://api.datareaper.io
+    description: Production
+  - url: https://staging-api.datareaper.io
+    description: Staging
+  - url: http://localhost:8080
+    description: Local development
+
+tags:
+  - name: Sessions
+    description: Anonymous session lifecycle used by frontend before authentication is introduced.
+  - name: Scans
+    description: Scan initialization and lifecycle from onboarding seed input.
+  - name: Dashboard
+    description: Command Center page data.
+  - name: IdentityGraph
+    description: Identity graph canvas and node detail panel.
+  - name: WarRoom
+    description: Broker engagement listing, thread messages, and escalation actions.
+  - name: Content
+    description: CMS-like content blocks shown in landing resources.
+  - name: Realtime
+    description: Realtime stream bootstrap for dashboard and war room updates.
+
+security:
+  - SessionHeader: []
+
+paths:
+  /v1/sessions:
+    post:
+      tags: [Sessions]
+      summary: Create anonymous frontend session
+      description: |
+        Called on first app interaction to create a short-lived anonymous session.
+        Session ID is used in X-Session-Id header for subsequent requests.
+      operationId: createSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSessionRequest'
+      responses:
+        '201':
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateSessionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /v1/scans:
+    post:
+      tags: [Scans]
+      summary: Initialize new privacy scan
+      description: |
+        Triggered from onboarding when user enters one seed value (email or phone).
+        Returns scan ID used by Command Center, Identity Graph, and War Room routes.
+      operationId: createScan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateScanRequest'
+            examples:
+              emailSeed:
+                value:
+                  seed:
+                    type: email
+                    value: user@email.com
+                  locale: en-IN
+                  jurisdictionHint: DPDP
+      responses:
+        '202':
+          description: Scan accepted and started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateScanResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /v1/scans/{scanId}:
+    get:
+      tags: [Scans]
+      summary: Get scan status and high-level lifecycle state
+      operationId: getScan
+      parameters:
+        - $ref: '#/components/parameters/ScanId'
+      responses:
+        '200':
+          description: Scan status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Scan'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/scans/{scanId}/dashboard/summary:
+    get:
+      tags: [Dashboard]
+      summary: Get Command Center summary cards and trends
+      operationId: getDashboardSummary
+      parameters:
+        - $ref: '#/components/parameters/ScanId'
+      responses:
+        '200':
+          description: Dashboard summary payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardSummary'
+              examples:
+                default:
+                  value:
+                    scanId: scn_01JY8H3R8Y9F8S3TB3D3S9K3A1
+                    stats:
+                      brokersScanned: 124
+                      exposuresFound: 38
+                      deletionsSecured: 12
+                      activeDisputes: 5
+                    trends:
+                      brokersScanned: [98, 102, 107, 111, 113, 118, 121, 124]
+                      exposuresFound: [21, 24, 26, 29, 31, 33, 35, 38]
+                      deletionsSecured: [2, 3, 4, 5, 7, 9, 10, 12]
+                      activeDisputes: [7, 7, 6, 6, 6, 5, 5, 5]
+                    threatBreakdown:
+                      - type: email
+                        count: 14
+                        percentOfTotal: 50
+                      - type: phone
+                        count: 8
+                        percentOfTotal: 29
+                      - type: location
+                        count: 6
+                        percentOfTotal: 21
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/scans/{scanId}/dashboard/radar-targets:
+    get:
+      tags: [Dashboard]
+      summary: Get live radar targets for Command Center radar
+      operationId: getRadarTargets
+      parameters:
+        - $ref: '#/components/parameters/ScanId'
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        '200':
+          description: Radar targets
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [scanId, items]
+                properties:
+                  scanId:
+                    $ref: '#/components/schemas/ScanId'
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RadarTarget'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/scans/{scanId}/dashboard/activity-logs:
+    get:
+      tags: [Dashboard]
+      summary: Get activity feed logs
+      operationId: getActivityLogs
+      parameters:
+        - $ref: '#/components/parameters/ScanId'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - name: types
+          in: query
+          description: Optional filter by one or more log categories.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/ActivityLogType'
+      responses:
+        '200':
+          description: Paginated activity logs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityLogPage'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/scans/{scanId}/dashboard/agents:
+    get:
+      tags: [Dashboard]
+      summary: Get autonomous agent status list
+      operationId: getAgentStatuses
+      parameters:
+        - $ref: '#/components/parameters/ScanId'
+      responses:
+        '200':
+          description: Agent statuses
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [scanId, agents]
+                properties:
+                  scanId:
+                    $ref: '#/components/schemas/ScanId'
+                  agents:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AgentStatus'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/scans/{scanId}/dashboard/pivot-chain:
+    get:
+      tags: [Dashboard]
+      summary: Get pivot tree data for intelligence chain graph
+      operationId: getPivotChain
+      parameters:
+        - $ref: '#/components/parameters/ScanId'
+      responses:
+        '200':
+          description: Pivot chain graph payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PivotChain'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/scans/{scanId}/identity-graph:
+    get:
+      tags: [IdentityGraph]
+      summary: Get identity graph nodes and edges
+      description: |
+        Supports visibility filters used by Identity Graph page:
+        - Platforms toggle
+        - Identity data toggle
+        - Data broker targets toggle
+      operationId: getIdentityGraph
+      parameters:
+        - $ref: '#/components/parameters/ScanId'
+        - name: includePlatforms
+          in: query
+          schema:
+            type: boolean
+            default: true
+        - name: includeIdentity
+          in: query
+          schema:
+            type: boolean
+            default: true
+        - name: includeTargets
+          in: query
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Identity graph payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdentityGraphPayload'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/scans/{scanId}/identity-graph/nodes/{nodeId}:
+    get:
+      tags: [IdentityGraph]
+      summary: Get single node detail panel data
+      operationId: getIdentityGraphNode
+      parameters:
+        - $ref: '#/components/parameters/ScanId'
+        - name: nodeId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Node details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdentityGraphNode'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/scans/{scanId}/war-room/engagements:
+    get:
+      tags: [WarRoom]
+      summary: List broker engagements for left pane in War Room
+      operationId: listEngagements
+      parameters:
+        - $ref: '#/components/parameters/ScanId'
+        - name: statuses
+          in: query
+          description: Optional status filters.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/EngagementStatus'
+      responses:
+        '200':
+          description: Engagement list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [scanId, items]
+                properties:
+                  scanId:
+                    $ref: '#/components/schemas/ScanId'
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EngagementSummary'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/scans/{scanId}/war-room/engagements/{engagementId}:
+    get:
+      tags: [WarRoom]
+      summary: Get full engagement including message thread
+      operationId: getEngagement
+      parameters:
+        - $ref: '#/components/parameters/ScanId'
+        - $ref: '#/components/parameters/EngagementId'
+      responses:
+        '200':
+          description: Engagement detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EngagementDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/scans/{scanId}/war-room/engagements/{engagementId}/messages:
+    get:
+      tags: [WarRoom]
+      summary: Get paginated thread messages
+      operationId: listEngagementMessages
+      parameters:
+        - $ref: '#/components/parameters/ScanId'
+        - $ref: '#/components/parameters/EngagementId'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Message page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessagePage'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags: [WarRoom]
+      summary: Add manual operator note or outbound message
+      description: |
+        Optional endpoint for future manual intervention.
+        Not currently used by the frontend but aligns with the War Room interaction model.
+      operationId: createEngagementMessage
+      parameters:
+        - $ref: '#/components/parameters/ScanId'
+        - $ref: '#/components/parameters/EngagementId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMessageRequest'
+      responses:
+        '201':
+          description: Message created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EngagementMessage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/scans/{scanId}/war-room/engagements/{engagementId}/actions/escalate:
+    post:
+      tags: [WarRoom]
+      summary: Trigger legal escalation on an engagement
+      operationId: escalateEngagement
+      parameters:
+        - $ref: '#/components/parameters/ScanId'
+        - $ref: '#/components/parameters/EngagementId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EscalateEngagementRequest'
+      responses:
+        '202':
+          description: Escalation accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EscalateEngagementResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/content/resources:
+    get:
+      tags: [Content]
+      summary: List landing resources/cards shown in final CTA section
+      operationId: listResources
+      parameters:
+        - name: section
+          in: query
+          required: false
+          schema:
+            type: string
+            default: framework
+      responses:
+        '200':
+          description: Resource cards
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ResourceCard'
+
+  /v1/realtime/connection:
+    post:
+      tags: [Realtime]
+      summary: Create realtime connection descriptor (WebSocket or SSE)
+      description: |
+        Frontend calls this once per scan route mount to receive a short-lived token and endpoint.
+        Backend can serve ws://, wss://, or SSE endpoint.
+      operationId: createRealtimeConnection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRealtimeConnectionRequest'
+      responses:
+        '201':
+          description: Realtime connection descriptor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateRealtimeConnectionResponse'
+
+components:
+  securitySchemes:
+    SessionHeader:
+      type: apiKey
+      in: header
+      name: X-Session-Id
+      description: Anonymous session key from POST /v1/sessions.
+
+  parameters:
+    ScanId:
+      name: scanId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/ScanId'
+    EngagementId:
+      name: engagementId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/EngagementId'
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Opaque pagination cursor.
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+
+  responses:
+    BadRequest:
+      description: Invalid request payload or query parameters.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    NotFound:
+      description: Requested resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Conflict:
+      description: Conflict with existing resource or in-progress operation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+
+  schemas:
+    ScanId:
+      type: string
+      pattern: '^scn_[A-Za-z0-9]{16,}$'
+      example: scn_01JY8H3R8Y9F8S3TB3D3S9K3A1
+
+    EngagementId:
+      type: string
+      pattern: '^eng_[A-Za-z0-9]{12,}$'
+      example: eng_APOLLO_0001
+
+    IsoTimestamp:
+      type: string
+      format: date-time
+      example: '2026-04-18T14:52:31Z'
+
+    RelativeTimeText:
+      type: string
+      description: Human readable relative label shown in UI.
+      example: 2 min ago
+
+    SeedType:
+      type: string
+      enum: [email, phone]
+
+    ScanStatus:
+      type: string
+      enum: [queued, discovering, identifying, engaging, stabilizing, completed, failed]
+
+    EngagementStatus:
+      type: string
+      enum: [resolved, stalling, illegal, in-progress]
+
+    MessageType:
+      type: string
+      enum: [broker, agent, system]
+
+    ClassificationType:
+      type: string
+      enum: [Violation, Delay, Warning, Progress, Resolved]
+
+    ThreatType:
+      type: string
+      enum: [email, phone, location]
+
+    RadarTargetStatus:
+      type: string
+      enum: [Scanning, Identified, Deletion in progress]
+
+    ActivityLogType:
+      type: string
+      enum: [System, Scan, Match, Legal, Comm]
+
+    GraphNodeType:
+      type: string
+      enum: [seed, platform, username, identity, target]
+
+    AgentMode:
+      type: string
+      enum: [SLEUTH, LEGAL, COMMS, DELETION]
+
+    CreateSessionRequest:
+      type: object
+      required: [client]
+      properties:
+        client:
+          type: object
+          required: [appVersion, platform]
+          properties:
+            appVersion:
+              type: string
+              example: web-1.0.0
+            platform:
+              type: string
+              example: browser
+            timezone:
+              type: string
+              example: Asia/Kolkata
+            locale:
+              type: string
+              example: en-IN
+
+    CreateSessionResponse:
+      type: object
+      required: [sessionId, expiresAt]
+      properties:
+        sessionId:
+          type: string
+          example: ses_01JY8GZC8QAZ6B3N3WFKAX2D56
+        expiresAt:
+          $ref: '#/components/schemas/IsoTimestamp'
+
+    SeedInput:
+      type: object
+      required: [type, value]
+      properties:
+        type:
+          $ref: '#/components/schemas/SeedType'
+        value:
+          type: string
+          description: Raw email or phone value from onboarding input.
+          example: user@email.com
+        countryCode:
+          type: string
+          description: Required for ambiguous phone parsing.
+          example: IN
+
+    CreateScanRequest:
+      type: object
+      required: [seed]
+      properties:
+        seed:
+          $ref: '#/components/schemas/SeedInput'
+        locale:
+          type: string
+          example: en-IN
+        jurisdictionHint:
+          type: string
+          enum: [DPDP, GDPR, CCPA, AUTO]
+          default: AUTO
+
+    CreateScanResponse:
+      type: object
+      required: [scanId, status, startedAt, routeHints]
+      properties:
+        scanId:
+          $ref: '#/components/schemas/ScanId'
+        status:
+          $ref: '#/components/schemas/ScanStatus'
+        startedAt:
+          $ref: '#/components/schemas/IsoTimestamp'
+        routeHints:
+          type: object
+          required: [commandCenter, identityGraph, warRoom]
+          properties:
+            commandCenter:
+              type: string
+              example: /command-center
+            identityGraph:
+              type: string
+              example: /identity-graph
+            warRoom:
+              type: string
+              example: /war-room
+
+    Scan:
+      type: object
+      required: [scanId, seed, status, progress, createdAt, updatedAt]
+      properties:
+        scanId:
+          $ref: '#/components/schemas/ScanId'
+        seed:
+          $ref: '#/components/schemas/SeedInput'
+        status:
+          $ref: '#/components/schemas/ScanStatus'
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+        createdAt:
+          $ref: '#/components/schemas/IsoTimestamp'
+        updatedAt:
+          $ref: '#/components/schemas/IsoTimestamp'
+        failureReason:
+          type: string
+
+    DashboardStats:
+      type: object
+      required: [brokersScanned, exposuresFound, deletionsSecured, activeDisputes]
+      properties:
+        brokersScanned:
+          type: integer
+          minimum: 0
+        exposuresFound:
+          type: integer
+          minimum: 0
+        deletionsSecured:
+          type: integer
+          minimum: 0
+        activeDisputes:
+          type: integer
+          minimum: 0
+
+    DashboardTrends:
+      type: object
+      required: [brokersScanned, exposuresFound, deletionsSecured, activeDisputes]
+      properties:
+        brokersScanned:
+          type: array
+          minItems: 8
+          maxItems: 64
+          items:
+            type: integer
+        exposuresFound:
+          type: array
+          minItems: 8
+          maxItems: 64
+          items:
+            type: integer
+        deletionsSecured:
+          type: array
+          minItems: 8
+          maxItems: 64
+          items:
+            type: integer
+        activeDisputes:
+          type: array
+          minItems: 8
+          maxItems: 64
+          items:
+            type: integer
+
+    ThreatBreakdownItem:
+      type: object
+      required: [type, count, percentOfTotal]
+      properties:
+        type:
+          $ref: '#/components/schemas/ThreatType'
+        count:
+          type: integer
+          minimum: 0
+        percentOfTotal:
+          type: number
+          minimum: 0
+          maximum: 100
+
+    DashboardSummary:
+      type: object
+      required: [scanId, stats, trends, threatBreakdown]
+      properties:
+        scanId:
+          $ref: '#/components/schemas/ScanId'
+        stats:
+          $ref: '#/components/schemas/DashboardStats'
+        trends:
+          $ref: '#/components/schemas/DashboardTrends'
+        threatBreakdown:
+          type: array
+          items:
+            $ref: '#/components/schemas/ThreatBreakdownItem'
+
+    RadarTarget:
+      type: object
+      required: [id, angle, distance, broker, status, color, type, confidence]
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        angle:
+          type: number
+          minimum: 0
+          maximum: 360
+        distance:
+          type: number
+          minimum: 0
+          maximum: 100
+        broker:
+          type: string
+          example: DarkWeb Market
+        status:
+          $ref: '#/components/schemas/RadarTargetStatus'
+        color:
+          type: string
+          description: Hex color to preserve frontend visual semantics.
+          pattern: '^#[0-9A-Fa-f]{6}$'
+          example: '#4a9eff'
+        type:
+          $ref: '#/components/schemas/ThreatType'
+        confidence:
+          type: integer
+          minimum: 0
+          maximum: 100
+
+    ActivityLog:
+      type: object
+      required: [id, type, message, color, createdAt]
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        type:
+          $ref: '#/components/schemas/ActivityLogType'
+        message:
+          type: string
+          example: Drafting DPDP-compliant request...
+        color:
+          type: string
+          pattern: '^#[0-9A-Fa-f]{6}$'
+          example: '#b94a48'
+        createdAt:
+          $ref: '#/components/schemas/IsoTimestamp'
+
+    ActivityLogPage:
+      type: object
+      required: [items, pageInfo]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActivityLog'
+        pageInfo:
+          $ref: '#/components/schemas/PageInfo'
+
+    AgentStatus:
+      type: object
+      required: [name, mode, status, task, progress]
+      properties:
+        name:
+          type: string
+          example: Sleuth Agent
+        mode:
+          $ref: '#/components/schemas/AgentMode'
+        status:
+          type: string
+          example: Active
+        task:
+          type: string
+          example: Scraping Apollo directory...
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+
+    PivotColumn:
+      type: object
+      required: [label, values]
+      properties:
+        label:
+          type: string
+          enum: [Emails, Usernames, Platforms, Brokers]
+        values:
+          type: array
+          items:
+            type: string
+
+    PivotEdge:
+      type: object
+      required: [fromColumn, fromIndex, toColumn, toIndex]
+      properties:
+        fromColumn:
+          type: integer
+          minimum: 0
+          maximum: 3
+        fromIndex:
+          type: integer
+          minimum: 0
+        toColumn:
+          type: integer
+          minimum: 0
+          maximum: 3
+        toIndex:
+          type: integer
+          minimum: 0
+
+    PivotSummaryItem:
+      type: object
+      required: [label, value, max]
+      properties:
+        label:
+          type: string
+        value:
+          type: integer
+        max:
+          type: integer
+
+    PivotChain:
+      type: object
+      required: [scanId, columns, edges, summary]
+      properties:
+        scanId:
+          $ref: '#/components/schemas/ScanId'
+        columns:
+          type: array
+          minItems: 4
+          maxItems: 4
+          items:
+            $ref: '#/components/schemas/PivotColumn'
+        edges:
+          type: array
+          items:
+            $ref: '#/components/schemas/PivotEdge'
+        summary:
+          type: array
+          items:
+            $ref: '#/components/schemas/PivotSummaryItem'
+
+    IdentityNodeData:
+      type: object
+      properties:
+        platform:
+          type: string
+        value:
+          type: string
+        status:
+          type: string
+        details:
+          type: array
+          items:
+            type: string
+
+    IdentityGraphNode:
+      type: object
+      required: [id, type, label, x, y, connections]
+      properties:
+        id:
+          type: string
+          example: identity1
+        type:
+          $ref: '#/components/schemas/GraphNodeType'
+        label:
+          type: string
+          example: John Doe
+        x:
+          type: number
+        y:
+          type: number
+        connections:
+          type: array
+          items:
+            type: string
+        revealStep:
+          type: integer
+          minimum: 0
+          description: Optional progressive animation step index.
+        data:
+          $ref: '#/components/schemas/IdentityNodeData'
+
+    IdentityGraphEdge:
+      type: object
+      required: [fromNodeId, toNodeId]
+      properties:
+        fromNodeId:
+          type: string
+        toNodeId:
+          type: string
+
+    IdentityGraphPayload:
+      type: object
+      required: [scanId, nodes, edges, filters]
+      properties:
+        scanId:
+          $ref: '#/components/schemas/ScanId'
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/IdentityGraphNode'
+        edges:
+          type: array
+          items:
+            $ref: '#/components/schemas/IdentityGraphEdge'
+        filters:
+          type: object
+          required: [showPlatforms, showIdentity, showTargets]
+          properties:
+            showPlatforms:
+              type: boolean
+            showIdentity:
+              type: boolean
+            showTargets:
+              type: boolean
+
+    EngagementSummary:
+      type: object
+      required: [id, brokerName, status, lastActivity, messageCount]
+      properties:
+        id:
+          $ref: '#/components/schemas/EngagementId'
+        brokerName:
+          type: string
+          example: Apollo.io
+        status:
+          $ref: '#/components/schemas/EngagementStatus'
+        lastActivity:
+          oneOf:
+            - $ref: '#/components/schemas/RelativeTimeText'
+            - $ref: '#/components/schemas/IsoTimestamp'
+        messageCount:
+          type: integer
+          minimum: 0
+
+    MessageMetadata:
+      type: object
+      properties:
+        classification:
+          $ref: '#/components/schemas/ClassificationType'
+        legalCitation:
+          type: string
+          example: Section 12(1), DPDP Act 2023
+        explanation:
+          type: string
+
+    EngagementMessage:
+      type: object
+      required: [id, type, content, timestamp]
+      properties:
+        id:
+          type: string
+          example: m7
+        type:
+          $ref: '#/components/schemas/MessageType'
+        content:
+          type: string
+        timestamp:
+          oneOf:
+            - type: string
+              description: Human label currently used in UI (for example 10:23 AM)
+            - $ref: '#/components/schemas/IsoTimestamp'
+        metadata:
+          $ref: '#/components/schemas/MessageMetadata'
+
+    EngagementDetail:
+      allOf:
+        - $ref: '#/components/schemas/EngagementSummary'
+        - type: object
+          required: [conversation]
+          properties:
+            conversation:
+              type: array
+              items:
+                $ref: '#/components/schemas/EngagementMessage'
+
+    MessagePage:
+      type: object
+      required: [items, pageInfo]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/EngagementMessage'
+        pageInfo:
+          $ref: '#/components/schemas/PageInfo'
+
+    CreateMessageRequest:
+      type: object
+      required: [type, content]
+      properties:
+        type:
+          type: string
+          enum: [agent, system]
+        content:
+          type: string
+        metadata:
+          $ref: '#/components/schemas/MessageMetadata'
+
+    EscalateEngagementRequest:
+      type: object
+      required: [reasonCode, note]
+      properties:
+        reasonCode:
+          type: string
+          enum: [illegal_request, excessive_delay, non_compliance, partial_compliance]
+        note:
+          type: string
+        legalFramework:
+          type: string
+          enum: [DPDP, GDPR, CCPA]
+          default: DPDP
+
+    EscalateEngagementResponse:
+      type: object
+      required: [accepted, engagementId, queuedAt]
+      properties:
+        accepted:
+          type: boolean
+          const: true
+        engagementId:
+          $ref: '#/components/schemas/EngagementId'
+        queuedAt:
+          $ref: '#/components/schemas/IsoTimestamp'
+
+    ResourceCard:
+      type: object
+      required: [id, tag, title, imageUrl, href]
+      properties:
+        id:
+          type: string
+        tag:
+          type: string
+          example: architecture
+        title:
+          type: string
+        imageUrl:
+          type: string
+          format: uri
+        href:
+          type: string
+          format: uri-reference
+
+    CreateRealtimeConnectionRequest:
+      type: object
+      required: [scanId, channels]
+      properties:
+        scanId:
+          $ref: '#/components/schemas/ScanId'
+        channels:
+          type: array
+          items:
+            type: string
+            enum:
+              - dashboard.summary
+              - dashboard.radar
+              - dashboard.activity
+              - dashboard.agents
+              - identity.graph
+              - warroom.engagements
+              - warroom.messages
+              - scans.lifecycle
+        preferredTransport:
+          type: string
+          enum: [websocket, sse]
+          default: websocket
+
+    CreateRealtimeConnectionResponse:
+      type: object
+      required: [connectionId, transport, endpoint, token, expiresAt]
+      properties:
+        connectionId:
+          type: string
+          example: rtc_01JY8N3PZG6C7W76P1Z6D4QH0R
+        transport:
+          type: string
+          enum: [websocket, sse]
+        endpoint:
+          type: string
+          format: uri
+          example: wss://api.datareaper.io/v1/realtime/ws
+        token:
+          type: string
+          description: Short-lived bearer used only for realtime handshake.
+        expiresAt:
+          $ref: '#/components/schemas/IsoTimestamp'
+
+    PageInfo:
+      type: object
+      required: [hasMore]
+      properties:
+        nextCursor:
+          type: string
+          nullable: true
+        hasMore:
+          type: boolean
+
+    ApiError:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          example: invalid_seed
+        message:
+          type: string
+          example: Seed value must be a valid email or E.164 phone number.
+        details:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+
+x-frontend-route-mapping:
+  /:
+    screen: Landing
+    requiredEndpoints:
+      - GET /v1/content/resources
+  /onboarding:
+    screen: Onboarding
+    requiredEndpoints:
+      - POST /v1/sessions
+      - POST /v1/scans
+  /command-center:
+    screen: CommandCenter
+    requiredEndpoints:
+      - GET /v1/scans/{scanId}
+      - GET /v1/scans/{scanId}/dashboard/summary
+      - GET /v1/scans/{scanId}/dashboard/radar-targets
+      - GET /v1/scans/{scanId}/dashboard/activity-logs
+      - GET /v1/scans/{scanId}/dashboard/agents
+      - GET /v1/scans/{scanId}/dashboard/pivot-chain
+      - POST /v1/realtime/connection
+  /identity-graph:
+    screen: IdentityGraph
+    requiredEndpoints:
+      - GET /v1/scans/{scanId}/identity-graph
+      - GET /v1/scans/{scanId}/identity-graph/nodes/{nodeId}
+      - POST /v1/realtime/connection
+  /war-room:
+    screen: WarRoom
+    requiredEndpoints:
+      - GET /v1/scans/{scanId}/war-room/engagements
+      - GET /v1/scans/{scanId}/war-room/engagements/{engagementId}
+      - GET /v1/scans/{scanId}/war-room/engagements/{engagementId}/messages
+      - POST /v1/scans/{scanId}/war-room/engagements/{engagementId}/actions/escalate
+      - POST /v1/realtime/connection
+
+x-realtime-events:
+  description: Canonical event schema for socket/SSE payloads.
+  envelope:
+    type: object
+    required: [event, occurredAt, scanId, payload]
+    properties:
+      event:
+        type: string
+        enum:
+          - scans.lifecycle.updated
+          - dashboard.summary.updated
+          - dashboard.radar.target_detected
+          - dashboard.activity.log_added
+          - dashboard.agent.updated
+          - identity.graph.node_added
+          - identity.graph.edge_added
+          - warroom.engagement.updated
+          - warroom.message.added
+      occurredAt:
+        type: string
+        format: date-time
+      scanId:
+        type: string
+      payload:
+        type: object
+        additionalProperties: true

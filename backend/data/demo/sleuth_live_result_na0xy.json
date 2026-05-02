@@ -1,0 +1,117 @@
+{
+  "accounts": [],
+  "usernames": [
+    "harshsinghal.harshsinghal",
+    "harshsinghal1972",
+    "harshsinghalharshsinghal",
+    "harshsinghalharshsinghal1972",
+    "na0xy",
+    "na0xy.na0xy",
+    "na0xyna0xy"
+  ],
+  "identity": {
+    "real_name": null,
+    "location": null,
+    "employer": null
+  },
+  "graph": {
+    "nodes": [
+      {
+        "id": "seed",
+        "type": "seed",
+        "label": "harshsinghal1972@gmail.com",
+        "x": 400,
+        "y": 300,
+        "data": {
+          "kind": "seed"
+        }
+      },
+      {
+        "id": "identity_name",
+        "type": "identity",
+        "label": "Unknown",
+        "x": 250,
+        "y": 420,
+        "data": {
+          "kind": "person"
+        }
+      },
+      {
+        "id": "identity_location",
+        "type": "identity",
+        "label": "Unknown",
+        "x": 550,
+        "y": 420,
+        "data": {
+          "kind": "location"
+        }
+      },
+      {
+        "id": "target_1",
+        "type": "target",
+        "label": "Apollo.io",
+        "x": 330,
+        "y": 560,
+        "data": {
+          "status": "Target Acquired"
+        }
+      },
+      {
+        "id": "target_2",
+        "type": "target",
+        "label": "Spokeo",
+        "x": 500,
+        "y": 560,
+        "data": {
+          "status": "Target Acquired"
+        }
+      },
+      {
+        "id": "target_3",
+        "type": "target",
+        "label": "Whitepages",
+        "x": 670,
+        "y": 560,
+        "data": {
+          "status": "Target Acquired"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "source": "username_1",
+        "target": "identity_name",
+        "relationship": "resolved_identity"
+      },
+      {
+        "source": "identity_name",
+        "target": "identity_location",
+        "relationship": "correlates_with"
+      },
+      {
+        "source": "identity_name",
+        "target": "target_1",
+        "relationship": "found_on_broker"
+      },
+      {
+        "source": "identity_name",
+        "target": "target_2",
+        "relationship": "found_on_broker"
+      },
+      {
+        "source": "identity_name",
+        "target": "target_3",
+        "relationship": "found_on_broker"
+      }
+    ]
+  },
+  "boot_log": [
+    "Depth 1: scanning 2 identifier(s) across OSINT layers.",
+    "Layer 1 (holehe): discovered 0 new account record(s).",
+    "Layer 2 (search probe): discovered 0 new URL(s).",
+    "Layer 3 (smart scraper): analyzed 0 new profile page(s).",
+    "Depth 1: no fresh pivots discovered; stopping recursion."
+  ],
+  "profiles": [],
+  "discovered_urls": []
+}
