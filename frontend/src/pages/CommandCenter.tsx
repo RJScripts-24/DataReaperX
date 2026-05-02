@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
 import { Activity, Shield, Trash2, Scale, Maximize2, X } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer } from "recharts";
@@ -354,6 +355,7 @@ function extractConflictScanId(error: ApiClientError): string | null {
 }
 
 export default function CommandCenter() {
+  const navigate = useNavigate();
   const { setActiveScan } = useScanContext();
   const scanId = useRequireScan();
   const session = getAuthSession();
@@ -833,74 +835,9 @@ export default function CommandCenter() {
       <PressureFilter />
       <ConnectionBanner status={realtimeStatus} />
 
-<<<<<<< HEAD
-      <nav
-        className="sticky top-0 z-50 pt-4 pb-3 px-6 md:px-12 lg:px-16 flex items-center justify-between backdrop-blur-sm"
-        style={{ backgroundColor: "rgba(245, 243, 239, 0.85)", borderBottom: "1.5px dashed rgba(0,0,0,0.15)" }}
-      >
-        <div className="max-w-[1600px] w-full mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}> 
-            <AnimatedDataReaperLogo imageStyle={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.15))" }} />
-            <PressureText as="span" className="text-3xl tracking-tight" style={{ fontFamily: "'Dancing Script', cursive", fontWeight: 700 }}>
-              DataReaper
-            </PressureText>
-          </div>
-
-          <div className="hidden md:flex items-center gap-8">
-            <button 
-              className="text-xl pencil-text transition-colors opacity-100 hover:opacity-70"
-              data-reaper-expression="happy"
-              data-reaper-phrases="Dashboard view. I see everything from up here.||The operations center is humming with activity."
-            >
-              Dashboard
-            </button>
-            <button 
-              onClick={() => navigate("/war-room")} 
-              className="text-xl pencil-text transition-colors opacity-60 hover:opacity-100"
-              data-reaper-expression="thinking"
-              data-reaper-phrases="To the War Room! Let's initiate some disputes.||Tactical transition. Let's get aggressive."
-            >
-              War Room
-            </button>
-            <button 
-              onClick={() => navigate("/identity-graph")} 
-              className="text-xl pencil-text transition-colors opacity-60 hover:opacity-100"
-              data-reaper-expression="thinking"
-              data-reaper-phrases="Viewing the web of connections.||Time to see who's really hiding behind the data."
-            >
-              Identity Graph
-            </button>
-            <button
-              onClick={() => navigate("/shield-logs")}
-              className="text-xl pencil-text transition-colors opacity-60 hover:opacity-100"
-              data-reaper-expression="alert"
-              data-reaper-phrases="Reviewing shield intel.||Let's inspect the threat trail."
-            >
-              Shield Logs
-            </button>
-            <button
-              onClick={() => navigate("/shadow-browser")}
-              className="text-xl pencil-text transition-colors opacity-60 hover:opacity-100"
-              data-reaper-expression="thinking"
-              data-reaper-phrases="Fake browsing noise.||What brokers think you clicked."
-            >
-              Shadow Browser
-            </button>
-            <button
-              onClick={() => navigate("/access-mirror")}
-              className="text-xl pencil-text transition-colors opacity-60 hover:opacity-100"
-              data-reaper-expression="surprised"
-              data-reaper-phrases="Cutting off third-party access. Feels good.||Let's see what they actually know about you.||Time to audit the damage."
-            >
-              Access Mirror
-            </button>
-          </div>
-
-=======
       <AppNavbar
         active="dashboard"
         rightSlot={
->>>>>>> c2f64050592ea3756bc6a31e7be1755038b583c1
           <div className="flex items-center gap-3">
             <div className="hidden lg:flex items-center gap-2">
               <motion.div

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo, Fragment, type ReactNode } from "react";
-import { useNavigate } from "react-router";
+import { AppNavbar } from "../components/AppNavbar";
 import { PressureText } from "../components/PressureText";
 import { Switch } from "../components/ui/switch";
 import { Ghost, History, Search, Globe, Clock, ExternalLink, Chrome, UserRound, ChevronDown } from "lucide-react";
@@ -120,7 +120,6 @@ function visitMatchesSearch(visit: HistoryVisit, q: string): boolean {
 }
 
 export default function ShadowBrowser() {
-  const navigate = useNavigate();
   const [shadowEnabled, setShadowEnabled] = useState(true);
   const [currentPersona, setCurrentPersona] = useState<Persona | null>(null);
   const [shadowLog, setShadowLog] = useState<ShadowLogEntry[]>([]);
@@ -228,19 +227,54 @@ export default function ShadowBrowser() {
         width: "100%",
         boxSizing: "border-box",
         background: COLORS.bg,
-        padding: "clamp(72px, 9vh, 100px) clamp(20px, 3vw, 48px) 20px",
         display: "flex",
         flexDirection: "column",
       }}
     >
-      <div style={{ width: "100%", maxWidth: "100%", margin: 0, flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+      <AppNavbar
+        active="shadow-browser"
+        rightSlot={
+          <div
+            style={{
+              display: "flex",
+              gap: 16,
+              alignItems: "center",
+              flexWrap: "wrap",
+              justifyContent: "center",
+              padding: "8px 14px",
+              background: COLORS.card,
+              border: `1.5px solid ${COLORS.border}`,
+              borderRadius: 14,
+              boxShadow: panelShadow,
+            }}
+          >
+            <span style={{ fontFamily: "'Patrick Hand', cursive", fontSize: "1.05rem", fontWeight: 600, color: COLORS.text }}>
+              Shadow Mode
+            </span>
+            <Switch checked={shadowEnabled} onCheckedChange={toggleShadow} />
+          </div>
+        }
+      />
 
-        {/* Header — stronger hierarchy */}
+      <div
+        style={{
+          width: "100%",
+          maxWidth: "100%",
+          margin: 0,
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          minHeight: 0,
+          padding: "16px clamp(16px, 3vw, 48px) 24px",
+          boxSizing: "border-box",
+        }}
+      >
+        {/* Page title — below shared nav */}
         <header
           style={{
             display: "flex",
-            alignItems: "flex-end",
-            justifyContent: "space-between",
+            alignItems: "center",
+            justifyContent: "stretch",
             gap: 24,
             flexWrap: "wrap",
             marginBottom: "clamp(16px, 2vh, 28px)",
@@ -249,7 +283,18 @@ export default function ShadowBrowser() {
             paddingBottom: 20,
           }}
         >
-          <div style={{ flex: "1 1 320px", minWidth: 0 }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              flexWrap: "wrap",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "clamp(20px, 4vw, 48px)",
+              width: "100%",
+              minWidth: 0,
+            }}
+          >
             <PressureText
               as="h1"
               variant="strong"
@@ -260,6 +305,9 @@ export default function ShadowBrowser() {
                 color: COLORS.text,
                 lineHeight: 1.1,
                 margin: 0,
+                display: "block",
+                width: "auto",
+                flexShrink: 0,
               }}
             >
               <Ghost size={40} style={{ display: "inline", marginRight: 12, verticalAlign: "middle" }} />
@@ -269,40 +317,20 @@ export default function ShadowBrowser() {
               style={{
                 fontFamily: "'Patrick Hand', cursive",
                 color: COLORS.textSec,
-                margin: "12px 0 0",
+                margin: 0,
                 fontSize: "clamp(1.05rem, 1.5vw, 1.35rem)",
                 lineHeight: 1.45,
-                maxWidth: "52rem",
+                display: "block",
+                flex: "1 1 min(100%, 240px)",
+                maxWidth: "min(36rem, max(12rem, calc(100% - 10rem)))",
+                marginLeft: "auto",
+                textAlign: "left",
+                boxSizing: "border-box",
               }}
             >
               Decoy identities browse in the background so data brokers see someone else. Pick a persona on the left — their
               decoy visits appear on the right.
             </p>
-          </div>
-          <div
-            style={{
-              display: "flex",
-              gap: 16,
-              alignItems: "center",
-              flexWrap: "wrap",
-              padding: "12px 20px",
-              background: COLORS.card,
-              border: `1.5px solid ${COLORS.border}`,
-              borderRadius: 14,
-              boxShadow: panelShadow,
-            }}
-          >
-            <span style={{ fontFamily: "'Patrick Hand', cursive", fontSize: "1.15rem", fontWeight: 600, color: COLORS.text }}>
-              Shadow Mode
-            </span>
-            <Switch checked={shadowEnabled} onCheckedChange={toggleShadow} />
-            <button
-              className="hand-drawn-button"
-              onClick={() => navigate("/command-center")}
-              style={{ padding: "10px 20px", backgroundColor: COLORS.blue, color: "#fff", fontSize: "1rem", fontFamily: "'Patrick Hand', cursive" }}
-            >
-              Command Center
-            </button>
           </div>
         </header>
 
