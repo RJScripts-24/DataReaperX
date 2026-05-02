@@ -80,6 +80,7 @@ export function clearSession(): void {
   sessionStorage.removeItem(SESSION_GOOGLE_SUB_STORAGE_KEY);
   sessionStorage.removeItem(SESSION_EXPIRY_STORAGE_KEY);
   sessionStorage.removeItem(SCAN_PENDING_STORAGE_KEY);
+  localStorage.removeItem("dr_shield_ui_active");
 }
 
 export function getAuthSession(): AuthSession | null {

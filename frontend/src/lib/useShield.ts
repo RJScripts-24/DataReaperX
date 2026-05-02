@@ -8,8 +8,28 @@ export type ShieldState =
   | "active"
   | "error";
 
+const SHIELD_UI_ACTIVE_KEY = "dr_shield_ui_active";
+
+function readPersistedActive(): boolean {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem(SHIELD_UI_ACTIVE_KEY) === "1";
+}
+
+function persistShieldActive(active: boolean) {
+  if (typeof window === "undefined") return;
+  if (active) {
+    localStorage.setItem(SHIELD_UI_ACTIVE_KEY, "1");
+  } else {
+    localStorage.removeItem(SHIELD_UI_ACTIVE_KEY);
+  }
+}
+
+function initialShieldState(): ShieldState {
+  return readPersistedActive() ? "active" : "idle";
+}
+
 export function useShield() {
-  const [shieldState, setShieldState] = useState<ShieldState>("idle");
+  const [shieldState, setShieldState] = useState<ShieldState>(initialShieldState);
   const [lastSeen, setLastSeen] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -19,10 +39,14 @@ export function useShield() {
       const status = await fetchShieldStatus();
       setShieldState((previous) => {
         if (status.active) {
+          persistShieldActive(true);
+          return "active";
+        }
+        if (readPersistedActive()) {
           return "active";
         }
         if (previous === "active") {
-          return "pending_install"; // went offline
+          return "pending_install";
         }
         return previous;
       });
@@ -30,7 +54,9 @@ export function useShield() {
         setLastSeen(status.last_seen);
       }
     } catch {
-      // silent — don't interrupt the user
+      if (readPersistedActive()) {
+        setShieldState("active");
+      }
     }
   }, []);
 
@@ -64,6 +90,7 @@ export function useShield() {
     const handler = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
       if (event.data?.type === "DR_EXTENSION_READY") {
+        persistShieldActive(true);
         setShieldState("active");
       }
     };
@@ -101,6 +128,7 @@ export function useShield() {
       setShieldState("downloading");
       const { shield_token } = await requestShieldToken();
       broadcastShieldToken(shield_token);
+      persistShieldActive(true);
       setShieldState("active");
       return shield_token;
     } catch (e) {
@@ -116,7 +144,7 @@ export function useShield() {
       setShieldState("downloading");
       const { shield_token } = await requestShieldToken();
       broadcastShieldToken(shield_token);
-      setShieldState("idle");
+      setShieldState(readPersistedActive() ? "active" : "idle");
       return shield_token;
     } catch (e) {
       setError("Failed to refresh shield token. Please try again.");
@@ -125,5 +153,5 @@ export function useShield() {
     }
   }, [broadcastShieldToken]);
 
-  return { shieldState, lastSeen, error, deployShield };
+  return { shieldState, lastSeen, error, deployShield, redeployShield, refreshShieldPack };
 }

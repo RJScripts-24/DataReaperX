@@ -918,12 +918,14 @@ export default function CommandCenter() {
           <div className="flex flex-wrap items-start gap-3 md:gap-4">
             Scan ID: {scanId} · Last update: {formatTimestamp(lastUpdatedAt)}
           */}
-          <div className="flex flex-wrap items-start gap-3 md:gap-4">
+          <div className="flex flex-wrap items-start gap-3 md:gap-4 w-full">
             <MetadataPill label={seedLabel} value={seedValue} />
             <MetadataPill label="Scan ID" value={scanId} />
             <MetadataPill label="Last update" value={formatTimestamp(lastUpdatedAt)} />
             <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
               <ProgressPill percent={displayProgress} status={backendStatus} />
+            </div>
+            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", flexWrap: "wrap" }}>
               <ShieldButton />
             </div>
           </div>
