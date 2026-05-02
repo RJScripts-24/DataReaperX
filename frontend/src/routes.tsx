@@ -6,6 +6,7 @@ import IdentityGraph from "./pages/IdentityGraph";
 import WarRoom from "./pages/WarRoom";
 import ShieldLogs from "./pages/ShieldLogs";
 import AccessMirror from "./pages/AccessMirror";
+import GoogleAuthCallback from "./pages/GoogleAuthCallback";
 
 export const router = createBrowserRouter([
   {
@@ -39,5 +40,9 @@ export const router = createBrowserRouter([
   {
     path: "/access-mirror",
     Component: AccessMirror,
+  },
+  {
+    path: "/auth/google/callback",
+    Component: GoogleAuthCallback,
   },
 ]);

@@ -3,6 +3,8 @@ import { useLocation, useNavigate } from "react-router";
 import { getAuthSession } from "./sessionManager";
 
 const ACTIVE_SCAN_STORAGE_KEY = "dr_active_scan_id";
+const SESSION_STORAGE_KEY = "dr_session_id";
+const SESSION_INVALIDATED_EVENT = "datareaper:session-invalidated";
 
 type ScanContextValue = {
   scanId: string | null;
@@ -21,6 +23,41 @@ function readInitialScanId(): string | null {
 
 export function ScanProvider({ children }: { children: ReactNode }) {
   const [scanId, setScanId] = useState<string | null>(readInitialScanId);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const clearScan = () => {
+      setScanId(null);
+      sessionStorage.removeItem(ACTIVE_SCAN_STORAGE_KEY);
+    };
+
+    const handleSessionInvalidated = () => {
+      clearScan();
+    };
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.storageArea !== sessionStorage) {
+        return;
+      }
+      if (event.key === ACTIVE_SCAN_STORAGE_KEY) {
+        setScanId(event.newValue);
+        return;
+      }
+      if (event.key === SESSION_STORAGE_KEY && !event.newValue) {
+        clearScan();
+      }
+    };
+
+    window.addEventListener(SESSION_INVALIDATED_EVENT, handleSessionInvalidated);
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      window.removeEventListener(SESSION_INVALIDATED_EVENT, handleSessionInvalidated);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, []);
 
   const value = useMemo<ScanContextValue>(
     () => ({
@@ -56,7 +93,33 @@ export function useRequireScan(): string | null {
   const { scanId } = useScanContext();
   const navigate = useNavigate();
   const location = useLocation();
-  const session = getAuthSession();
+  const [session, setSession] = useState(() => getAuthSession());
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const refreshSession = () => {
+      setSession(getAuthSession());
+    };
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.storageArea !== sessionStorage) {
+        return;
+      }
+      if (!event.key || event.key.startsWith("dr_session_")) {
+        refreshSession();
+      }
+    };
+
+    window.addEventListener(SESSION_INVALIDATED_EVENT, refreshSession);
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      window.removeEventListener(SESSION_INVALIDATED_EVENT, refreshSession);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, []);
 
   useEffect(() => {
     if (!session) {
@@ -74,7 +137,33 @@ export function useRequireScan(): string | null {
 export function useRequireAuth(): string | null {
   const navigate = useNavigate();
   const location = useLocation();
-  const session = getAuthSession();
+  const [session, setSession] = useState(() => getAuthSession());
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const refreshSession = () => {
+      setSession(getAuthSession());
+    };
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.storageArea !== sessionStorage) {
+        return;
+      }
+      if (!event.key || event.key.startsWith("dr_session_")) {
+        refreshSession();
+      }
+    };
+
+    window.addEventListener(SESSION_INVALIDATED_EVENT, refreshSession);
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      window.removeEventListener(SESSION_INVALIDATED_EVENT, refreshSession);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, []);
 
   useEffect(() => {
     if (!session) {

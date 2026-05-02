@@ -490,10 +490,6 @@ export default function CommandCenter() {
     };
   }, [backendProgress, displayProgress]);
 
-  if (!scanId) {
-    return null;
-  }
-
   const statusLabel =
     isStopped
       ? "STOPPED"
@@ -748,6 +744,10 @@ export default function CommandCenter() {
       )}
     </div>
   );
+
+  if (!scanId) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen relative w-full overflow-x-hidden pb-8" style={{ backgroundColor: COLORS.bg }}>

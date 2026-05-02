@@ -112,7 +112,7 @@ export default function ShieldLogs() {
               as="h1"
               variant="strong"
               className="paper-text"
-              style={{ fontFamily: "'Dancing Script', cursive", fontSize: 34, color: COLORS.text }}
+              style={{ fontFamily: "'Dancing Script', cursive", fontSize: 34, color: COLORS.text, display: "block", marginBottom: 4 }}
             >
               Shield Threat Log
             </PressureText>
@@ -120,7 +120,7 @@ export default function ShieldLogs() {
               as="p"
               variant="lite"
               className="paper-text"
-              style={{ fontFamily: "'Patrick Hand', cursive", color: COLORS.textSec }}
+              style={{ fontFamily: "'Patrick Hand', cursive", color: COLORS.textSec, display: "block" }}
             >
               Malicious sites and password interception attempts recorded by Tripwire.
             </PressureText>
@@ -133,12 +133,12 @@ export default function ShieldLogs() {
               as="h2"
               variant="strong"
               className="paper-text"
-              style={{ fontFamily: "'Patrick Hand', cursive", fontSize: 20, color: COLORS.red }}
+              style={{ fontFamily: "'Patrick Hand', cursive", fontSize: 20, color: COLORS.red, display: "block" }}
             >
               Malicious Sites Visited
             </PressureText>
             {threatLog.length === 0 ? (
-              <p style={{ marginTop: 12, color: COLORS.textSec }}>No detections yet.</p>
+              <p style={{ marginTop: 12, color: COLORS.textSec, display: "block" }}>No detections yet.</p>
             ) : (
               <ul style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
                 {threatLog.map((entry, index) => (
@@ -157,12 +157,12 @@ export default function ShieldLogs() {
               as="h2"
               variant="strong"
               className="paper-text"
-              style={{ fontFamily: "'Patrick Hand', cursive", fontSize: 20, color: COLORS.green }}
+              style={{ fontFamily: "'Patrick Hand', cursive", fontSize: 20, color: COLORS.green, display: "block" }}
             >
               Password Interception Attempts
             </PressureText>
             {passwordLog.length === 0 ? (
-              <p style={{ marginTop: 12, color: COLORS.textSec }}>No password attempts recorded.</p>
+              <p style={{ marginTop: 12, color: COLORS.textSec, display: "block" }}>No password attempts recorded.</p>
             ) : (
               <ul style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
                 {passwordLog.map((entry, index) => (

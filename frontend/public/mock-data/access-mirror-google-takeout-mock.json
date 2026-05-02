@@ -1,0 +1,109 @@
+{
+  "platform": "Google",
+  "export_type": "takeout_mock",
+  "generated_at": "2026-05-02T12:30:00Z",
+  "account": {
+    "email": "test.user+accessmirror@example.com",
+    "account_created": "2021-03-16",
+    "region": "IN",
+    "devices_linked": [
+      "Pixel 7",
+      "Windows 11 Laptop",
+      "iPad Pro"
+    ]
+  },
+  "retention_summary": {
+    "years_of_data": 4,
+    "activity_events": 9421,
+    "location_events": 4832,
+    "ad_interest_topics": 312,
+    "uploaded_contacts": 247
+  },
+  "timeline": [
+    {
+      "year": "2021",
+      "event": "Location history enabled on two devices",
+      "severity": "high"
+    },
+    {
+      "year": "2022",
+      "event": "Contacts uploaded from mobile sync",
+      "severity": "high"
+    },
+    {
+      "year": "2023",
+      "event": "Ad personalization categories expanded",
+      "severity": "medium"
+    },
+    {
+      "year": "2024",
+      "event": "Old inactive devices retained in account logs",
+      "severity": "low"
+    }
+  ],
+  "authorized_apps": [
+    {
+      "app": "Notion",
+      "granted_date": "2022-03-14",
+      "source": "signin",
+      "scopes": [
+        "email",
+        "profile"
+      ],
+      "risk": "LOW"
+    },
+    {
+      "app": "Slack",
+      "granted_date": "2021-07-22",
+      "source": "gmail_grant",
+      "scopes": [
+        "gmail.readonly",
+        "drive.readonly"
+      ],
+      "risk": "HIGH"
+    },
+    {
+      "app": "Zapier",
+      "granted_date": "2020-11-05",
+      "source": "gmail_grant",
+      "scopes": [
+        "contacts.readonly",
+        "calendar",
+        "gmail.readonly"
+      ],
+      "risk": "HIGH"
+    },
+    {
+      "app": "Linear",
+      "granted_date": "2023-02-28",
+      "source": "drive_grant",
+      "scopes": [
+        "email",
+        "drive.readonly"
+      ],
+      "risk": "MEDIUM"
+    },
+    {
+      "app": "Zoom",
+      "granted_date": "2021-04-15",
+      "source": "calendar_grant",
+      "scopes": [
+        "calendar.events",
+        "calendar.readonly"
+      ],
+      "risk": "MEDIUM"
+    }
+  ],
+  "third_parties": [
+    "DoubleClick",
+    "Google Ads",
+    "Firebase Analytics",
+    "YouTube Analytics"
+  ],
+  "recommendations_seed": [
+    "Delete location history",
+    "Clear ad interest profile",
+    "Remove inactive devices",
+    "Revoke high-risk app grants"
+  ]
+}

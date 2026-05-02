@@ -38,6 +38,7 @@ const SESSION_STORAGE_KEYS = [
   "dr_session_expires_at",
   "dr_active_scan_id",
 ];
+const SESSION_INVALIDATED_EVENT = "datareaper:session-invalidated";
 
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000",
@@ -101,6 +102,7 @@ apiClient.interceptors.response.use(
       for (const key of SESSION_STORAGE_KEYS) {
         sessionStorage.removeItem(key);
       }
+      window.dispatchEvent(new CustomEvent(SESSION_INVALIDATED_EVENT));
     }
     return Promise.reject(normalizeApiError(error));
   }

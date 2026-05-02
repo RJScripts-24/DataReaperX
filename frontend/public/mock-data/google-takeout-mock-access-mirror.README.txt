@@ -1,0 +1,12 @@
+Google Takeout-style mock archive for Access Mirror testing.
+
+Archive file:
+google-takeout-mock-access-mirror.zip
+
+Top-level structure inside zip:
+- Takeout/archive_browser.html
+- Takeout/My Activity/.../MyActivity.json
+- Takeout/Google Account/3rd-party apps & services with access to your account/...
+- Takeout/Location History/Records.json
+
+Generated: 2026-05-02

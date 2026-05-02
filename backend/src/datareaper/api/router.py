@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from datareaper.api.routes import (
+    access_mirror,
     content,
     dashboard,
     events,
@@ -21,6 +22,7 @@ from datareaper.scraper.resume_handler import router as resume_router
 
 api_router = APIRouter()
 api_router.include_router(health.router, prefix="/health", tags=["health"])
+api_router.include_router(access_mirror.router, prefix="/access-mirror", tags=["access-mirror"])
 api_router.include_router(onboarding.router, prefix="/onboarding", tags=["onboarding"])
 api_router.include_router(scans.router, prefix="/scans", tags=["scans"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])

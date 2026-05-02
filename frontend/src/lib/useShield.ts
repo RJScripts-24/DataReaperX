@@ -14,28 +14,50 @@ export function useShield() {
   const [error, setError] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Poll shield status every 10 seconds
-  useEffect(() => {
-    const poll = async () => {
-      try {
-        const status = await fetchShieldStatus();
+  const pollShieldStatus = useCallback(async () => {
+    try {
+      const status = await fetchShieldStatus();
+      setShieldState((previous) => {
         if (status.active) {
-          setShieldState("active");
-          setLastSeen(status.last_seen);
-        } else if (shieldState === "active") {
-          setShieldState("pending_install"); // went offline
+          return "active";
         }
-      } catch {
-        // silent — don't interrupt the user
+        if (previous === "active") {
+          return "pending_install"; // went offline
+        }
+        return previous;
+      });
+      if (status.active) {
+        setLastSeen(status.last_seen);
       }
-    };
+    } catch {
+      // silent — don't interrupt the user
+    }
+  }, []);
 
-    poll();
-    pollRef.current = setInterval(poll, 10_000);
+  // Poll shield status, with faster cadence while awaiting install/activation.
+  useEffect(() => {
+    void pollShieldStatus();
+    const intervalMs = shieldState === "pending_install" ? 2_000 : 10_000;
+    pollRef.current = setInterval(() => {
+      void pollShieldStatus();
+    }, intervalMs);
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, []);
+  }, [pollShieldStatus, shieldState]);
+
+  // Refresh immediately when user returns focus to the tab.
+  useEffect(() => {
+    const refresh = () => {
+      void pollShieldStatus();
+    };
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [pollShieldStatus]);
 
   // Listen for messages from the installed extension (via window.postMessage)
   useEffect(() => {

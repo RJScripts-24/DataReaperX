@@ -1,10 +1,11 @@
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import { AppNavbar } from "../components/AppNavbar";
 import { PressureFilter } from "../components/PressureFilter";
 import { PressureText } from "../components/PressureText";
 import { useRequireAuth } from "../lib/scanContext";
+import apiClient from "../lib/apiClient";
 
 const COLORS = {
   bg: "#f5f3ef",
@@ -27,6 +28,24 @@ type OAuthToken = {
   source: "gmail_grant" | "calendar_grant" | "drive_grant" | "signin";
 };
 
+const RISK_WEIGHT: Record<OAuthToken["risk"], number> = {
+  LOW: 0,
+  MEDIUM: 1,
+  HIGH: 2,
+};
+
+const SOURCE_WEIGHT: Record<OAuthToken["source"], number> = {
+  signin: 0,
+  drive_grant: 1,
+  calendar_grant: 1,
+  gmail_grant: 2,
+};
+
+type GoogleOAuthConfigResponse = {
+  configured: boolean;
+  clientId: string;
+};
+
 type DataMirrorReport = {
   company: string;
   summary: string;
@@ -37,16 +56,62 @@ type DataMirrorReport = {
   authorizedApps?: { app: string; grantedDate: string; scopes: string[] }[];
 };
 
-const MOCK_GOOGLE_TOKENS: OAuthToken[] = [
-  { id: "g1", app: "Notion",    permissions: ["Read Drive files", "See email address"],                           risk: "LOW",    source: "drive_grant"    },
-  { id: "g2", app: "Slack",     permissions: ["Read Gmail", "Send email on your behalf"],                         risk: "HIGH",   source: "gmail_grant"    },
-  { id: "g3", app: "Zapier",    permissions: ["Manage calendar", "Read contacts", "Read Gmail"],                  risk: "HIGH",   source: "gmail_grant"    },
-  { id: "g4", app: "Figma",     permissions: ["See email address"],                                               risk: "LOW",    source: "signin"         },
-  { id: "g5", app: "Linear",    permissions: ["See email address", "Read Drive"],                                 risk: "MEDIUM", source: "drive_grant"    },
-  { id: "g6", app: "Zoom",      permissions: ["Read calendar", "Write calendar"],                                 risk: "MEDIUM", source: "calendar_grant" },
-  { id: "g7", app: "Typeform",  permissions: ["Read Gmail", "Access contacts"],                                   risk: "HIGH",   source: "gmail_grant"    },
-  { id: "g8", app: "Calendly",  permissions: ["Manage calendar"],                                                 risk: "LOW",    source: "calendar_grant" },
-];
+function normalizePermissionLabel(input: string): string {
+  const scopeMap: Record<string, string> = {
+    openid: "Verify your identity",
+    email: "See your email address",
+    profile: "See your basic profile info",
+    "https://www.googleapis.com/auth/userinfo.email": "See your email address",
+    "https://www.googleapis.com/auth/userinfo.profile": "See your basic profile info",
+    "https://www.googleapis.com/auth/gmail.readonly": "Read Gmail",
+    "https://www.googleapis.com/auth/gmail.send": "Send email on your behalf",
+    "https://www.googleapis.com/auth/drive.readonly": "Read Drive files",
+    "https://www.googleapis.com/auth/drive": "Manage Drive files",
+    "https://www.googleapis.com/auth/calendar.readonly": "Read your calendar",
+    "https://www.googleapis.com/auth/calendar": "Manage your calendar",
+    "https://www.googleapis.com/auth/contacts.readonly": "Read your contacts",
+  };
+  return scopeMap[input] ?? input;
+}
+
+function normalizeGoogleTokens(tokens: OAuthToken[]): OAuthToken[] {
+  const grouped = new Map<string, OAuthToken>();
+
+  for (const token of tokens) {
+    const mappedPermissions = token.permissions.map((permission) => normalizePermissionLabel(permission));
+    const looksLikeSignIn = mappedPermissions.every((permission) =>
+      ["Verify your identity", "See your email address", "See your basic profile info"].includes(permission)
+    );
+    const app = token.app === "Google Account" && looksLikeSignIn ? "Google Sign-in" : token.app;
+    const key = app.trim().toLowerCase();
+    const existing = grouped.get(key);
+
+    if (!existing) {
+      grouped.set(key, {
+        ...token,
+        app,
+        permissions: [...new Set(mappedPermissions)],
+      });
+      continue;
+    }
+
+    existing.permissions = [...new Set([...existing.permissions, ...mappedPermissions])];
+    if (RISK_WEIGHT[token.risk] > RISK_WEIGHT[existing.risk]) {
+      existing.risk = token.risk;
+    }
+    if (SOURCE_WEIGHT[token.source] > SOURCE_WEIGHT[existing.source]) {
+      existing.source = token.source;
+    }
+  }
+
+  return [...grouped.values()].sort((left, right) => {
+    const riskDelta = RISK_WEIGHT[right.risk] - RISK_WEIGHT[left.risk];
+    if (riskDelta !== 0) {
+      return riskDelta;
+    }
+    return left.app.localeCompare(right.app);
+  });
+}
 
 const COMPANIES = [
   { name: "Google",    emoji: "" },
@@ -141,201 +206,16 @@ function buildDeletionRequest(report: DataMirrorReport): string {
   return `I am submitting a formal data deletion request under GDPR/CCPA/DPDP.\n\nPlease delete the following data associated with my account:\n${lines}\n\nI expect a response within 30 days as required by applicable law.`;
 }
 
-function generateMockReport(company: string, _filename: string): DataMirrorReport {
-  const reports: Record<string, DataMirrorReport> = {
-    Google: {
-      company: "Google",
-      summary: "Google has 4 years of location history, 312 ad interest topics, 58 linked devices, and 9,421 search & activity events stored against your account. Your contact graph of 247 people has been retained since 2022.",
-      stats: [
-        { label: "Location history events", value: "4,832", icon: "" },
-        { label: "Ad interest topics",       value: "312",   icon: "" },
-        { label: "Linked devices",           value: "58",    icon: "" },
-        { label: "Activity events",          value: "9,421", icon: "" },
-        { label: "Uploaded contacts",        value: "247",   icon: "" },
-        { label: "Years of data retained",   value: "4 yrs", icon: "" },
-      ],
-      timeline: [
-        { year: "2021", event: "Location tracking became active across 3 devices",           severity: "high"   },
-        { year: "2022", event: "Contact graph uploaded and stored (247 contacts)",            severity: "high"   },
-        { year: "2023", event: "Ad interest profile expanded to 312 topics",                 severity: "medium" },
-        { year: "2024", event: "14 old inactive devices still retained in records",           severity: "low"    },
-      ],
-      thirdParties: ["DoubleClick", "Google Ads", "Firebase Analytics", "YouTube Analytics", "Google Marketing Platform"],
-      recommendations: [
-        { action: "Delete location history at myaccount.google.com → Data & Privacy → Location History", priority: "high"   },
-        { action: "Clear your ad interest profile at myadcenter.google.com",                              priority: "high"   },
-        { action: "Delete uploaded contact graph under Google Contacts settings",                          priority: "high"   },
-        { action: "Remove inactive devices from your account",                                             priority: "medium" },
-        { action: "Pause Web & App Activity tracking",                                                     priority: "medium" },
-        { action: "Request deletion of historical activity logs under GDPR/DPDP",                          priority: "low"    },
-      ],
-      authorizedApps: [
-        { app: "Notion",   grantedDate: "2022-03-14", scopes: ["See your email address", "See your personal info"]                          },
-        { app: "Slack",    grantedDate: "2021-07-22", scopes: ["Read your email", "View your Google Drive files"]                            },
-        { app: "Zapier",   grantedDate: "2020-11-05", scopes: ["Manage your calendar", "Read your contacts", "Read your email"]              },
-        { app: "Figma",    grantedDate: "2022-01-10", scopes: ["See your email address"]                                                     },
-        { app: "Linear",   grantedDate: "2023-02-28", scopes: ["See your email address", "View your Google Drive files"]                     },
-        { app: "Zoom",     grantedDate: "2021-04-15", scopes: ["View and edit your Google Calendar"]                                         },
-      ],
-    },
-    Instagram: {
-      company: "Instagram",
-      summary: "Instagram has retained 3 years of your activity including 1,847 posts you've liked, 284 accounts you've followed and unfollowed, your inferred ad profile with 89 interest categories, and login history across 12 devices.",
-      stats: [
-        { label: "Posts liked",                value: "1,847", icon: "" },
-        { label: "Ad interest categories",     value: "89",    icon: "" },
-        { label: "Devices logged in from",     value: "12",    icon: "" },
-        { label: "Accounts followed/unfollowed", value: "284", icon: "" },
-        { label: "Stories viewed",             value: "5,203", icon: "" },
-        { label: "Messages retained",          value: "3,891", icon: "" },
-      ],
-      timeline: [
-        { year: "2021", event: "Ad interest profile created from browsing behavior",          severity: "high"   },
-        { year: "2022", event: "Phone contact list uploaded and matched to accounts",          severity: "high"   },
-        { year: "2023", event: "Location data inferred from photo metadata",                  severity: "medium" },
-        { year: "2024", event: "Old device sessions from 8 inactive devices still stored",    severity: "low"    },
-      ],
-      thirdParties: ["Meta Audience Network", "Facebook Business", "LiveRamp", "Acxiom"],
-      recommendations: [
-        { action: "Clear your ad interest categories in Settings → Ads → Ad topics",                             priority: "high"   },
-        { action: "Delete uploaded phone contacts under Settings → Account → Contacts syncing",                  priority: "high"   },
-        { action: "Remove old device sessions under Settings → Security → Login activity",                       priority: "medium" },
-        { action: "Request deletion of message history from inactive conversations",                             priority: "medium" },
-        { action: "Submit GDPR/DPDP deletion request for retained activity logs",                                priority: "low"    },
-      ],
-    },
-    LinkedIn: {
-      company: "LinkedIn",
-      summary: "LinkedIn has stored 5 years of your professional activity including 312 connection messages, your full job application history across 47 applications, inferenced salary data, and a detailed recruiter-visible ad profile.",
-      stats: [
-        { label: "Connections",               value: "847",   icon: "" },
-        { label: "Job applications stored",   value: "47",    icon: "" },
-        { label: "Ad targeting attributes",   value: "156",   icon: "" },
-        { label: "Profile views tracked",     value: "2,341", icon: "" },
-        { label: "Messages retained",         value: "312",   icon: "" },
-        { label: "Years of data",             value: "5 yrs", icon: "" },
-      ],
-      timeline: [
-        { year: "2020", event: "Job application history tracking began",                       severity: "medium" },
-        { year: "2021", event: "Salary inference profile built from job titles and connections", severity: "high"   },
-        { year: "2022", event: "Ad targeting profile expanded to 156 attributes",              severity: "high"   },
-        { year: "2024", event: "Old email addresses still retained on account",                severity: "low"    },
-      ],
-      thirdParties: ["LinkedIn Audience Network", "Microsoft Advertising", "Bing Ads", "LiveRamp"],
-      recommendations: [
-        { action: "Opt out of salary data inference under Settings → Privacy → Profile visibility", priority: "high"   },
-        { action: "Clear ad targeting attributes under Settings → Advertising data",                priority: "high"   },
-        { action: "Delete old job application data via Settings → Job seeking preferences",         priority: "medium" },
-        { action: "Remove old email addresses retained on your account",                            priority: "medium" },
-        { action: "Request GDPR data deletion for pre-2022 activity",                              priority: "low"    },
-      ],
-    },
-    Amazon: {
-      company: "Amazon",
-      summary: "Amazon has 7 years of your purchase history, 4,219 browsing events, all your Alexa voice commands retained since 2020, and a detailed purchase-behavior ad profile shared with third-party sellers.",
-      stats: [
-        { label: "Orders in history",         value: "634",    icon: "" },
-        { label: "Browsing events tracked",   value: "4,219",  icon: "" },
-        { label: "Alexa voice commands",      value: "1,847",  icon: "" },
-        { label: "Wishlist items retained",   value: "203",    icon: "" },
-        { label: "Addresses stored",          value: "7",      icon: "" },
-        { label: "Years of purchase data",    value: "7 yrs",  icon: "" },
-      ],
-      timeline: [
-        { year: "2020", event: "Alexa voice command logging enabled across 2 devices",                   severity: "high"   },
-        { year: "2021", event: "Purchase behavior profile shared with third-party marketplace sellers",   severity: "high"   },
-        { year: "2022", event: "Browsing history used to build predictive purchase model",               severity: "medium" },
-        { year: "2024", event: "5 old delivery addresses still retained on account",                     severity: "low"    },
-      ],
-      thirdParties: ["Amazon DSP", "Amazon Attribution", "IMDb", "Twitch", "AWS Advertising"],
-      recommendations: [
-        { action: "Delete all Alexa voice recordings at alexa.amazon.com → Review Voice History",        priority: "high"   },
-        { action: "Opt out of interest-based ads under Account → Advertising Preferences",               priority: "high"   },
-        { action: "Remove old delivery addresses no longer in use",                                      priority: "medium" },
-        { action: "Clear browsing history under Account → Browsing History → Manage History",            priority: "medium" },
-        { action: "Request deletion of purchase behavior profile data",                                  priority: "low"    },
-      ],
-    },
-    Spotify: {
-      company: "Spotify",
-      summary: "Spotify has retained your complete streaming history — 28,441 track plays, your inferred mood and personality profile, listening pattern data used for ad targeting, and search history across 3 devices.",
-      stats: [
-        { label: "Track plays recorded",       value: "28,441", icon: "" },
-        { label: "Playlists created",          value: "47",     icon: "" },
-        { label: "Inferred mood tags",         value: "34",     icon: "" },
-        { label: "Search history events",      value: "1,203",  icon: "" },
-        { label: "Podcast episodes played",    value: "312",    icon: "" },
-        { label: "Years of stream history",    value: "6 yrs",  icon: "" },
-      ],
-      timeline: [
-        { year: "2019", event: "Listening behavior analysis began for ad targeting",                    severity: "medium" },
-        { year: "2021", event: "Mood and personality profile inferred from listening patterns",         severity: "high"   },
-        { year: "2022", event: "Location data inferred from playlist usage timing",                    severity: "high"   },
-        { year: "2024", event: "Full streaming history retained — no auto-deletion",                    severity: "low"    },
-      ],
-      thirdParties: ["Spotify Audience Network", "The Trade Desk", "Google DV360", "Nielsen"],
-      recommendations: [
-        { action: "Opt out of personalized ads under Privacy Settings → Tailored Ads",               priority: "high"   },
-        { action: "Request deletion of inferred mood and interest profile data",                      priority: "high"   },
-        { action: "Clear search history under Account → Security and Privacy",                        priority: "medium" },
-        { action: "Review and revoke third-party app access under Apps settings",                     priority: "medium" },
-        { action: "Submit GDPR request for deletion of pre-2021 behavioral data",                     priority: "low"    },
-      ],
-    },
-    Uber: {
-      company: "Uber",
-      summary: "Uber has stored 5 years of trip data including precise pickup and drop-off coordinates for 847 trips, your home and work addresses derived from trip patterns, device fingerprint data from 6 phones, and payment method history.",
-      stats: [
-        { label: "Trips recorded",            value: "847",    icon: "" },
-        { label: "Location points stored",    value: "12,400+",icon: "" },
-        { label: "Devices fingerprinted",     value: "6",      icon: "" },
-        { label: "Payment methods retained",  value: "4",      icon: "" },
-        { label: "Support tickets stored",    value: "23",     icon: "" },
-        { label: "Years of trip history",     value: "5 yrs",  icon: "" },
-      ],
-      timeline: [
-        { year: "2020", event: "Home and work addresses inferred from repeated trip patterns",  severity: "high"   },
-        { year: "2021", event: "Device fingerprinting expanded across 6 devices",              severity: "high"   },
-        { year: "2022", event: "Trip data shared with city transit authorities",               severity: "medium" },
-        { year: "2024", event: "3 expired payment methods still retained in system",           severity: "low"    },
-      ],
-      thirdParties: ["Google Maps", "Braintree Payments", "Segment Analytics", "AppsFlyer"],
-      recommendations: [
-        { action: "Request deletion of trip history older than 1 year at privacy.uber.com",             priority: "high"   },
-        { action: "Remove inferred home and work addresses from your profile",                           priority: "high"   },
-        { action: "Delete expired payment methods from your account",                                   priority: "medium" },
-        { action: "Opt out of data sharing with transit authorities where available",                   priority: "medium" },
-        { action: "Submit GDPR/DPDP request for full account data purge",                               priority: "low"    },
-      ],
-    },
-    Other: {
-      company: "Unknown Platform",
-      summary: "DataReaper detected data across multiple categories in your export. Review the breakdown below and use the recommendations to reduce your exposure.",
-      stats: [
-        { label: "Records detected",           value: "2,300+",  icon: "" },
-        { label: "Unique identifiers found",   value: "14",      icon: "" },
-        { label: "Date range of data",         value: "3+ yrs",  icon: "" },
-        { label: "Inferred attributes",        value: "Unknown", icon: "" },
-        { label: "Third parties detected",     value: "3+",      icon: "" },
-        { label: "Location records",           value: "Present", icon: "" },
-      ],
-      timeline: [
-        { year: "2022", event: "Initial data collection began at account creation",         severity: "medium" },
-        { year: "2023", event: "Behavioral data retained beyond expected window",           severity: "high"   },
-        { year: "2024", event: "Third-party data sharing detected in export",               severity: "high"   },
-      ],
-      thirdParties: ["Unknown analytics provider", "Ad network partner", "Data broker partner"],
-      recommendations: [
-        { action: "Request full account deletion through the platform's privacy settings",      priority: "high"   },
-        { action: "Revoke any third-party app access connected to this account",                priority: "high"   },
-        { action: "Submit a GDPR/CCPA/DPDP data deletion request by email",                   priority: "medium" },
-        { action: "Review and clear any synced contact or location data",                       priority: "medium" },
-        { action: "Monitor for data broker listings using DataReaper's War Room",               priority: "low"    },
-      ],
-    },
-  };
+function generateCodeVerifier(): string {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return btoa(String.fromCharCode(...array)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+}
 
-  return reports[company] ?? reports["Other"];
+async function generateCodeChallenge(verifier: string): Promise<string> {
+  const data = new TextEncoder().encode(verifier);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return btoa(String.fromCharCode(...new Uint8Array(digest))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
 }
 
 export default function AccessMirror() {
@@ -343,6 +223,9 @@ export default function AccessMirror() {
 
   const [googleConnected, setGoogleConnected] = useState(false);
   const [googleTokens, setGoogleTokens] = useState<OAuthToken[]>([]);
+  const [googleClientId, setGoogleClientId] = useState("");
+  const [isGoogleConfigLoading, setIsGoogleConfigLoading] = useState(true);
+  const [googleConfigError, setGoogleConfigError] = useState<string | null>(null);
   const [severedIds, setSeveredIds] = useState<Set<string>>(new Set());
   const [isSevering, setIsSevering] = useState(false);
 
@@ -353,41 +236,193 @@ export default function AccessMirror() {
   const [report, setReport] = useState<DataMirrorReport | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const activeTokenCount = Math.max(googleTokens.length - severedIds.size, 0);
   const highRiskTokens = googleTokens.filter((token) => token.risk === "HIGH" && !severedIds.has(token.id));
   const highRiskCount = highRiskTokens.length;
+
+  useEffect(() => {
+    let isMounted = true;
+    const callbackParams = new URLSearchParams(window.location.search);
+    const isOAuthCallback = callbackParams.has("code") || callbackParams.has("error");
+    setIsGoogleConfigLoading(true);
+
+    void apiClient
+      .get<GoogleOAuthConfigResponse>("/api/access-mirror/google/config")
+      .then(({ data }) => {
+        if (!isMounted) {
+          return;
+        }
+        const clientId = String(data.clientId ?? "").trim();
+        if (data.configured && clientId) {
+          setGoogleClientId(clientId);
+          setGoogleConfigError(null);
+          return;
+        }
+        setGoogleClientId("");
+        setGoogleConfigError("Google OAuth is not configured on backend.");
+      })
+      .catch(() => {
+        if (!isMounted) {
+          return;
+        }
+        setGoogleClientId("");
+        setGoogleConfigError("Unable to load Google OAuth configuration from backend.");
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsGoogleConfigLoading(false);
+        }
+      });
+
+    if (!isOAuthCallback) {
+      void apiClient
+        .get("/api/access-mirror/google/grants")
+        .then(({ data }: any) => {
+          if (!isMounted) {
+            return;
+          }
+          const grants: OAuthToken[] = normalizeGoogleTokens(Array.isArray(data?.grants) ? data.grants : []);
+          setGoogleConnected(Boolean(data?.connected));
+          setGoogleTokens(grants);
+
+          const revocationLog = data?.revocation_log ?? data?.revocationLog ?? {};
+          const nextSevered = new Set<string>();
+          if (revocationLog && typeof revocationLog === "object") {
+            for (const token of grants) {
+              if ((revocationLog as Record<string, any>)[token.app]?.revoked) {
+                nextSevered.add(token.id);
+              }
+            }
+          }
+          setSeveredIds(nextSevered);
+        })
+        .catch(() => {
+          if (!isMounted) {
+            return;
+          }
+          setGoogleConnected(false);
+          setGoogleTokens([]);
+        });
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    const error = params.get("error");
+
+    if (error) {
+      toast.error(`Google sign-in was cancelled: ${error}`);
+      window.history.replaceState({}, "", "/access-mirror");
+      return;
+    }
+
+    if (!code) {
+      return;
+    }
+
+    const codeVerifier = sessionStorage.getItem("google_pkce_verifier");
+    const redirectUri = sessionStorage.getItem("google_pkce_redirect_uri");
+    sessionStorage.removeItem("google_pkce_verifier");
+    sessionStorage.removeItem("google_pkce_redirect_uri");
+
+    if (!codeVerifier || !redirectUri) {
+      toast.error("OAuth state lost. Please try connecting again.");
+      window.history.replaceState({}, "", "/access-mirror");
+      return;
+    }
+
+    void (async () => {
+      toast("Exchanging authorization code with DataReaper...");
+      try {
+        const { data } = await apiClient.post("/api/access-mirror/google/connect", {
+          code,
+          code_verifier: codeVerifier,
+          redirect_uri: redirectUri,
+        });
+        setGoogleConnected(true);
+        setGoogleTokens(normalizeGoogleTokens(data.grants ?? []));
+        setSeveredIds(new Set());
+        toast.success(`Connected — ${(data.grants ?? []).length} app grants found.`);
+      } catch (error: any) {
+        const detail = error?.message ?? "Connection failed.";
+        toast.error(`Google connect failed: ${detail}`);
+      } finally {
+        window.history.replaceState({}, "", "/access-mirror");
+      }
+    })();
+  }, []);
 
   if (!authenticatedEmail) {
     return null;
   }
 
-  function handleGoogleConnect() {
-    toast("Connecting to Google...");
-    setTimeout(() => {
-      setGoogleConnected(true);
-      setGoogleTokens(MOCK_GOOGLE_TOKENS);
-      toast.success("Connected — 8 app grants found.");
-      // TODO: Replace with real Google OAuth PKCE flow using
-      //   scope: "openid email profile https://www.googleapis.com/auth/gmail.readonly"
-      //   Then call GET https://www.googleapis.com/oauth2/v3/userinfo
-    }, 1500);
-  }
-
-  function handleRevokeToken(id: string, appName: string) {
-    setSeveredIds((previous) => new Set([...previous, id]));
-    toast.success(`${appName} access revoked.`);
-  }
-
-  async function handleSeverAll() {
-    if (highRiskCount === 0) {
+  async function handleGoogleConnect() {
+    if (isGoogleConfigLoading) {
+      toast("Loading Google OAuth configuration...");
       return;
     }
 
+    const clientId = googleClientId.trim();
+    if (!clientId) {
+      toast.error(googleConfigError ?? "Google OAuth is not configured on backend yet.");
+      return;
+    }
+
+    const codeVerifier = generateCodeVerifier();
+    const codeChallenge = await generateCodeChallenge(codeVerifier);
+    const redirectUri = `${window.location.origin}/auth/google/callback`;
+
+    sessionStorage.setItem("google_pkce_verifier", codeVerifier);
+    sessionStorage.setItem("google_pkce_redirect_uri", redirectUri);
+
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: "code",
+      scope: "openid email profile https://www.googleapis.com/auth/gmail.readonly",
+      code_challenge: codeChallenge,
+      code_challenge_method: "S256",
+      access_type: "online",
+      prompt: "select_account",
+    });
+
+    toast("Redirecting to Google sign-in...");
+    window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+  }
+
+  async function handleRevokeToken(id: string, appName: string) {
+    try {
+      await apiClient.post(`/api/access-mirror/google/revoke/${encodeURIComponent(appName)}`);
+      setSeveredIds((previous) => new Set([...previous, id]));
+      toast.success(`${appName} access revoked.`);
+    } catch {
+      setSeveredIds((previous) => new Set([...previous, id]));
+      toast(`${appName} marked as revoked. Confirm removal at myaccount.google.com/permissions.`);
+    }
+  }
+
+  async function handleSeverAll() {
     setIsSevering(true);
-    await new Promise((resolve) => setTimeout(resolve, 1800));
-    const ids = highRiskTokens.map((token) => token.id);
-    setSeveredIds((previous) => new Set([...previous, ...ids]));
+    const toSever = [...highRiskTokens];
+    let count = 0;
+
+    for (const token of toSever) {
+      try {
+        await apiClient.post(`/api/access-mirror/google/revoke/${encodeURIComponent(token.app)}`);
+      } catch {
+        // Best effort revoke; still update local state.
+      }
+      setSeveredIds((previous) => new Set([...previous, token.id]));
+      count += 1;
+    }
+
     setIsSevering(false);
-    toast.success(`${ids.length} high-risk connections severed. Google will enforce within minutes.`);
+    toast.success(`${count} high-risk connections severed. Confirm at myaccount.google.com/permissions.`);
   }
 
   async function handleFileUpload(file: File) {
@@ -398,18 +433,36 @@ export default function AccessMirror() {
     setUploadedFile(file);
     setReport(null);
     setIsAnalyzing(true);
-    toast(`Parsing ${file.name}...`);
-    await new Promise((resolve) => setTimeout(resolve, 2200));
-    const mockReport = generateMockReport(selectedCompany, file.name);
-    setReport(mockReport);
-    setIsAnalyzing(false);
-    toast.success(`Report ready — ${selectedCompany} data parsed.`);
-    // TODO: Replace with real backend call:
-    // const formData = new FormData();
-    // formData.append("file", file);
-    // formData.append("company", selectedCompany);
-    // const res = await apiClient.post("/api/access-mirror/parse", formData);
-    // setReport(res.data);
+    toast(`Uploading ${file.name} to DataReaper...`);
+
+    try {
+      const formData = new FormData();
+      formData.append("platform", selectedCompany);
+      formData.append("file", file);
+
+      const { data } = await apiClient.post("/api/access-mirror/parse", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      const mapped: DataMirrorReport = {
+        company: data.company,
+        summary: data.summary,
+        stats: data.stats ?? [],
+        timeline: data.timeline ?? [],
+        thirdParties: data.thirdParties ?? data.third_parties ?? [],
+        recommendations: data.recommendations ?? [],
+        authorizedApps: data.authorizedApps ?? data.authorized_apps ?? undefined,
+      };
+
+      setReport(mapped);
+      setIsAnalyzing(false);
+      toast.success(`Report ready — ${selectedCompany} data parsed.`);
+    } catch (error: any) {
+      setIsAnalyzing(false);
+      setUploadedFile(null);
+      const detail = error?.message ?? "Parse failed. Try a different file.";
+      toast.error(detail);
+    }
   }
 
   function handleDrop(e: React.DragEvent<HTMLDivElement>) {
@@ -510,12 +563,30 @@ export default function AccessMirror() {
                     DataReaper will connect with read-only OAuth scopes. We can see your Gmail grants and basic account info.
                     For the full list of every app you've authorized via 'Sign in with Google', use the Takeout path below.
                   </PressureText>
-                  <button className="hand-drawn-button w-full" onClick={handleGoogleConnect}>
-                    Connect with Google
+                  <PressureText
+                    as="p"
+                    style={{ fontFamily: "'Patrick Hand', cursive", color: COLORS.purple, marginBottom: "12px", fontSize: "0.82rem" }}
+                  >
+                    Full third-party app history is extracted from your Google Takeout file after upload in the Data Drop panel.
+                  </PressureText>
+                  <button
+                    className="hand-drawn-button w-full"
+                    disabled={isGoogleConfigLoading || !googleClientId}
+                    onClick={() => void handleGoogleConnect()}
+                  >
+                    {isGoogleConfigLoading ? "Loading Google OAuth..." : "Connect with Google"}
                   </button>
                   <PressureText as="p" style={{ fontFamily: "'Patrick Hand', cursive", fontSize: "0.78rem", color: COLORS.textSec, marginTop: "8px" }}>
-                    // TODO: Real Google OAuth PKCE flow — preview mode active
+                    Uses Google OAuth (PKCE). You can review connected app access after sign-in.
                   </PressureText>
+                  {googleConfigError ? (
+                    <PressureText
+                      as="p"
+                      style={{ fontFamily: "'Patrick Hand', cursive", fontSize: "0.8rem", color: COLORS.red, marginTop: "8px" }}
+                    >
+                      {googleConfigError}
+                    </PressureText>
+                  ) : null}
                 </motion.div>
               ) : (
                 <motion.div
@@ -546,12 +617,18 @@ export default function AccessMirror() {
                   </div>
 
                   <PressureText as="p" style={{ fontFamily: "'Patrick Hand', cursive", color: COLORS.textSec, marginBottom: "12px", fontSize: "0.92rem" }}>
-                    8 app grants detected. Review high-risk scopes and revoke any app that can read your inbox or act on your behalf.
+                    {activeTokenCount} app grants detected. Review high-risk scopes and revoke any app that can read your inbox or act on your behalf.
+                  </PressureText>
+                  <PressureText
+                    as="p"
+                    style={{ fontFamily: "'Patrick Hand', cursive", color: COLORS.purple, marginBottom: "12px", fontSize: "0.82rem" }}
+                  >
+                    This list shows scopes from your current OAuth grant. Full third-party app history comes from Google Takeout parsing in Data Drop.
                   </PressureText>
 
                   <div style={{ borderTop: "1.5px dashed rgba(0,0,0,0.14)", paddingTop: "12px", marginTop: "8px" }}>
                     <PressureText as="p" style={{ fontFamily: "'Patrick Hand', cursive", marginBottom: "10px", color: COLORS.text }}>
-                      Authorized apps ({googleTokens.length - severedIds.size})
+                      Authorized apps ({activeTokenCount})
                     </PressureText>
 
                     <AnimatePresence>
@@ -619,7 +696,7 @@ export default function AccessMirror() {
                             </div>
                             {token.risk === "HIGH" ? (
                               <div style={{ marginTop: "8px" }}>
-                                <button className="hand-drawn-button" onClick={() => handleRevokeToken(token.id, token.app)}>
+                                <button className="hand-drawn-button" onClick={() => void handleRevokeToken(token.id, token.app)}>
                                   Revoke
                                 </button>
                               </div>

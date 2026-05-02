@@ -28,6 +28,62 @@ const THREAT_CACHE_TTL_MS = 5 * 60 * 1000;
   }
 })();
 
+function normalizeOrigin(value) {
+  try {
+    const parsed = new URL(value);
+    return `${parsed.protocol}//${parsed.host}`;
+  } catch {
+    return null;
+  }
+}
+
+function getDashboardOrigins() {
+  const origins = new Set(["http://localhost:5173", "http://127.0.0.1:5173"]);
+  const configured = normalizeOrigin(DASHBOARD_ORIGIN);
+  if (configured) {
+    origins.add(configured);
+    if (configured.includes("://localhost")) {
+      origins.add(configured.replace("://localhost", "://127.0.0.1"));
+    }
+    if (configured.includes("://127.0.0.1")) {
+      origins.add(configured.replace("://127.0.0.1", "://localhost"));
+    }
+  }
+  return [...origins];
+}
+
+function isDashboardTabUrl(url) {
+  const origin = normalizeOrigin(url);
+  if (!origin) return false;
+  return getDashboardOrigins().includes(origin);
+}
+
+function injectTokenBridgeIntoDashboardTabs(reason) {
+  chrome.tabs.query({}, (tabs) => {
+    tabs.forEach((tab) => {
+      if (!tab.id || !tab.url || !isDashboardTabUrl(tab.url)) {
+        return;
+      }
+      chrome.scripting.executeScript(
+        {
+          target: { tabId: tab.id, allFrames: false },
+          files: ["token-bridge.js"],
+        },
+        () => {
+          if (chrome.runtime.lastError) {
+            console.debug(
+              `[DataReaper] token-bridge injection skipped (${reason}) for tab ${tab.id}:`,
+              chrome.runtime.lastError.message
+            );
+          } else {
+            console.log(`[DataReaper] token-bridge injected (${reason}) into tab ${tab.id}.`);
+          }
+        }
+      );
+    });
+  });
+}
+
 // --------------------------------------------------------------------------
 // Install — create heartbeat alarm, fetch runtime config
 // --------------------------------------------------------------------------
@@ -41,6 +97,7 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 
   chrome.alarms.create(HEARTBEAT_ALARM, { periodInMinutes: 1 });
+  injectTokenBridgeIntoDashboardTabs("onInstalled:initial");
 
   // Fetch runtime config from backend to avoid hardcoded URLs
   (async () => {
@@ -59,6 +116,8 @@ chrome.runtime.onInstalled.addListener(() => {
       }
     } catch (e) {
       console.warn("[DataReaper] Could not fetch runtime config — using defaults.", e.message);
+    } finally {
+      injectTokenBridgeIntoDashboardTabs("onInstalled:postConfig");
     }
   })();
 });
