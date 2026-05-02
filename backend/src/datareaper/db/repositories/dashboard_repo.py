@@ -185,21 +185,62 @@ class DashboardRepository:
         )
         targets = bundle["targets"]
         events = bundle.get("events", [])
+        account_platforms = [str(p or "").strip() for p in (bundle.get("accounts") or [])]
+        account_usernames = [str(u or "").strip() for u in (bundle.get("usernames") or [])]
+        n_surfaces = max(len(account_platforms), len(account_usernames))
+        scan = dict(bundle.get("scan") or {})
+        seed_type = str(scan.get("seed_type") or "").strip().lower()
+        normalized_seed = str(scan.get("normalized_seed") or "").strip()
 
-        brokers_scanned = len(targets)
+        brokers_scanned = max(len(targets), n_surfaces)
         deletions_secured = sum(1 for target in targets if str(target.get("status", "")).lower() == "resolved")
         active_disputes = max(brokers_scanned - deletions_secured, 0)
         exposures_from_events = _count_events(events, "exposure_found")
-        exposures_found = max(brokers_scanned, exposures_from_events)
+        exposures_found = max(len(targets), exposures_from_events, n_surfaces)
+
+        email_on_targets = sum("Email" in target["dataTypes"] for target in targets)
+        phone_on_targets = sum("Phone" in target["dataTypes"] for target in targets)
+        location_on_targets = sum(
+            "Location" in target["dataTypes"] or "Address" in target["dataTypes"] for target in targets
+        )
+        from_email_seed = seed_type == "email" or (
+            seed_type in {"", "auto"} and "@" in normalized_seed and normalized_seed
+        )
+        from_phone_seed = seed_type == "phone"
 
         threat_breakdown = {
-            "emails_exposed": sum("Email" in target["dataTypes"] for target in targets),
-            "phone_leaks": sum("Phone" in target["dataTypes"] for target in targets),
-            "location_traces": sum(
-                "Location" in target["dataTypes"] or "Address" in target["dataTypes"] for target in targets
-            ),
-            "social_profiles": max(1, len(bundle["accounts"])),
+            "emails_exposed": max(email_on_targets, n_surfaces if from_email_seed else 0),
+            "phone_leaks": max(phone_on_targets, n_surfaces if from_phone_seed else 0),
+            "location_traces": location_on_targets,
+            "social_profiles": n_surfaces,
         }
+
+        radar_targets: list[dict[str, Any]] = [
+            {
+                "id": target["id"],
+                "broker": target["brokerName"],
+                "status": target["status"],
+                "angle": 35 + (index * 55),
+                "distance": 30 + (index * 10),
+                "severity": "critical" if target["status"] == "illegal" else "high" if target["status"] == "stalling" else "medium",
+            }
+            for index, target in enumerate(targets)
+        ]
+        if not radar_targets and n_surfaces > 0:
+            for index in range(n_surfaces):
+                plat = account_platforms[index] if index < len(account_platforms) else "Surface"
+                user = account_usernames[index] if index < len(account_usernames) else ""
+                label = f"{plat}: @{user}" if user else plat
+                radar_targets.append(
+                    {
+                        "id": f"osint-surface-{index}",
+                        "broker": label,
+                        "status": "recon",
+                        "angle": float(35 + (index * 47) % 320),
+                        "distance": float(32 + (index % 6) * 11),
+                        "severity": "medium",
+                    }
+                )
 
         return {
             "scan_id": scan_id,
@@ -210,17 +251,7 @@ class DashboardRepository:
                 {"title": "Active Legal Disputes", "value": active_disputes, "delta": 0, "label": "Awaiting response"},
             ],
             "threat_breakdown": threat_breakdown,
-            "radar_targets": [
-                {
-                    "id": target["id"],
-                    "broker": target["brokerName"],
-                    "status": target["status"],
-                    "angle": 35 + (index * 55),
-                    "distance": 30 + (index * 10),
-                    "severity": "critical" if target["status"] == "illegal" else "high" if target["status"] == "stalling" else "medium",
-                }
-                for index, target in enumerate(targets)
-            ],
+            "radar_targets": radar_targets,
             "activity_feed": bundle["events"],
             "agent_statuses": build_live_agent_statuses(bundle),
         }

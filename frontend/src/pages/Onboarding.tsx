@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import { PressureFilter } from "../components/PressureFilter";
 import { PressureText } from "../components/PressureText";
+import { ScanDeckLoader } from "../components/ScanDeckLoader";
 import apiClient, { ApiClientError } from "../lib/apiClient";
 import { useScanContext } from "../lib/scanContext";
 import { createGoogleSession, getAuthSession, setScanPending } from "../lib/sessionManager";
@@ -390,6 +391,14 @@ export default function Onboarding() {
           ) : null}
         </motion.div>
       </main>
+
+      {isSigningIn ? (
+        <ScanDeckLoader
+          variant="overlay"
+          title="Linking your Google account"
+          subtitle="Verifying credentials and preparing your secure session…"
+        />
+      ) : null}
     </div>
   );
 }

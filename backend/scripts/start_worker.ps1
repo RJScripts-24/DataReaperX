@@ -36,6 +36,16 @@ if ($uvCommand -and $useUv) {
 
 $pythonCandidates = @()
 
+# Prefer project virtualenvs first (pyproject/uv.lock includes maigret and all worker deps).
+$backendVenvPython = Join-Path $backendDir ".venv/Scripts/python.exe"
+if (Test-Path $backendVenvPython) {
+	$pythonCandidates += $backendVenvPython
+}
+$workspaceVenvPython = Join-Path $workspaceDir ".venv/Scripts/python.exe"
+if (Test-Path $workspaceVenvPython) {
+	$pythonCandidates += $workspaceVenvPython
+}
+
 if ($env:CONDA_PREFIX) {
 	$pythonCandidates += (Join-Path $env:CONDA_PREFIX "python.exe")
 }
@@ -53,8 +63,6 @@ if ($condaCmd) {
 	}
 }
 
-$pythonCandidates += (Join-Path $backendDir ".venv/Scripts/python.exe")
-$pythonCandidates += (Join-Path $workspaceDir ".venv/Scripts/python.exe")
 $pythonCandidates = $pythonCandidates | Where-Object { $_ } | Select-Object -Unique
 
 function Test-PythonModule {

@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
-import { Activity, Shield, Trash2, Scale, Maximize2, X } from "lucide-react";
+import { Activity, LogOut, Shield, Trash2, Scale, Maximize2, X } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer } from "recharts";
 import { toast } from "sonner";
 
 import { AppNavbar } from "../components/AppNavbar";
 import { PressureFilter } from "../components/PressureFilter";
 import { PressureText } from "../components/PressureText";
+import { ScanDeckLoader } from "../components/ScanDeckLoader";
 import { ApiClientError } from "../lib/apiClient";
 import apiClient from "../lib/apiClient";
 import { createScan, stopScan } from "../lib/api";
@@ -16,7 +17,7 @@ import { useScanContext, useRequireScan } from "../lib/scanContext";
 import { type RealtimeConnectionStatus } from "../lib/wsClient";
 import { useDashboard } from "../lib/useDashboard";
 import { useEngagementsQuery, useScanStatusQuery } from "../lib/hooks";
-import { getAuthSession, isScanPending, setScanPending } from "../lib/sessionManager";
+import { clearSession, getAuthSession, isScanPending, setScanPending } from "../lib/sessionManager";
 
 const COLORS = {
   bg: "#f5f3ef",
@@ -356,7 +357,7 @@ function extractConflictScanId(error: ApiClientError): string | null {
 
 export default function CommandCenter() {
   const navigate = useNavigate();
-  const { setActiveScan } = useScanContext();
+  const { setActiveScan, clearActiveScan } = useScanContext();
   const scanId = useRequireScan();
   const session = getAuthSession();
   const scanPending = isScanPending();
@@ -462,7 +463,11 @@ export default function CommandCenter() {
     state.radarTargets.length,
   ]);
 
-  const radarTargets = state.radarTargets.filter((target) => target.type === "email");
+  const seedType = scanQuery.data?.seed?.type;
+  const radarTargets =
+    seedType === "phone"
+      ? state.radarTargets.filter((target) => target.type === "phone")
+      : state.radarTargets;
   const activityLogs = state.activityFeed;
   const agents = state.agentStatuses;
   const engagements = engagementsQuery.data?.items ?? [];
@@ -791,7 +796,16 @@ export default function CommandCenter() {
   );
 
   if (!scanId) {
-    return null;
+    return (
+      <ScanDeckLoader
+        title="Spinning up your deck"
+        subtitle={
+          scanPending || isInitializingScan
+            ? "Creating your scan and warming the sleuth agents…"
+            : "Connecting to your command center…"
+        }
+      />
+    );
   }
 
   return (
@@ -900,6 +914,21 @@ export default function CommandCenter() {
               data-reaper-phrases="A new target? I'm always hungry for more.||Let's fire up a fresh sequence.||Resetting coordinates for a new hunt."
             >
               {isStartingNewScan ? "Starting..." : "Start New Scan"}
+            </button>
+            <button
+              type="button"
+              className="hand-drawn-button px-3 py-2 inline-flex items-center gap-1.5"
+              style={{ color: COLORS.textSec, borderColor: "rgba(0,0,0,0.22)" }}
+              onClick={() => {
+                clearActiveScan();
+                clearSession();
+                toast.success("Signed out.");
+                navigate("/onboarding", { replace: true });
+              }}
+              aria-label="Log out"
+            >
+              <LogOut className="w-4 h-4 shrink-0 opacity-80" aria-hidden />
+              <span style={{ fontFamily: "'Patrick Hand', cursive" }}>Log out</span>
             </button>
           </div>
         }

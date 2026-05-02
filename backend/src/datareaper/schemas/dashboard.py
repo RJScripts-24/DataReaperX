@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from pydantic import BaseModel
+from typing import Any
+
+from pydantic import BaseModel, Field
 
 
 class StatCard(BaseModel):
@@ -24,6 +26,7 @@ class ActivityLogItem(BaseModel):
     type: str
     message: str
     created_at: str
+    payload: dict[str, Any] = Field(default_factory=dict)
 
 
 class AgentStatus(BaseModel):

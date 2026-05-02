@@ -78,6 +78,7 @@ type DashboardActivityItem = {
   type: string;
   message: string;
   created_at: string;
+  payload?: Record<string, unknown>;
 };
 
 type DashboardAgentStatus = {
@@ -119,6 +120,7 @@ export type ActivityItem = {
   message: string;
   color: string;
   createdAt: string;
+  payload?: Record<string, unknown>;
 };
 
 export type AgentStatus = {
@@ -558,7 +560,7 @@ function statValue(stats: DashboardStat[], title: string): number {
 }
 
 function mapDashboardResponse(response: DashboardResponse): LiveDashboardState {
-  const radarTargets = response.radar_targets.map((target, index) => {
+  let radarTargets = response.radar_targets.map((target, index) => {
     const type = inferThreatTypeFromSeverity(target.severity, index);
 
     return {
@@ -571,6 +573,38 @@ function mapDashboardResponse(response: DashboardResponse): LiveDashboardState {
       color: colorForType(type),
     } satisfies RadarDot;
   });
+
+  if (radarTargets.length === 0) {
+    const exposureRows = response.activity_feed.filter(
+      (row) => String(row.type || "").toLowerCase() === "exposure_found"
+    );
+    radarTargets = exposureRows.map((row, index) => {
+      const payload = row.payload ?? {};
+      const angle = toNumber(typeof payload.angle === "number" ? payload.angle : ((index * 53) % 360));
+      const distance = normalizeDistance(
+        toNumber(typeof payload.distance === "number" ? payload.distance : 35 + (index % 5) * 12)
+      );
+      const brokerRaw =
+        typeof payload.broker_name === "string"
+          ? payload.broker_name
+          : typeof payload.site === "string"
+            ? payload.site
+            : "Exposure";
+      const dataTypes = Array.isArray(payload.data_types)
+        ? payload.data_types.map((item) => String(item))
+        : ["Email"];
+      const threatType = inferThreatTypeFromData(dataTypes);
+      return {
+        id: `exposure-rest-${row.id}`,
+        angle,
+        distance,
+        broker: String(brokerRaw || "Exposure"),
+        status: "active",
+        type: threatType,
+        color: colorForType(threatType),
+      } satisfies RadarDot;
+    });
+  }
 
   const brokers = uniqueStrings(radarTargets.map((target) => target.broker));
 
@@ -591,6 +625,7 @@ function mapDashboardResponse(response: DashboardResponse): LiveDashboardState {
       message: String(item.message || "No message"),
       color: activityColorForEventType(String(item.type || "System")),
       createdAt: String(item.created_at || new Date().toISOString()),
+      payload: item.payload,
     })),
     agentStatuses: mergeAgentStatuses(
       [],
@@ -1114,7 +1149,10 @@ export function useDashboard(scanId: string | null): {
       ]);
 
       const mappedDashboard = mapDashboardResponse(dashboardResponse.data);
-      const shouldStreamBrokers = isActiveScanStatus(scanResponse.data?.status);
+      // "discovering" includes OSINT before any broker cases exist — must merge full REST payload
+      // or stats, activity feed, and threat counts stay empty while the pipeline runs.
+      const shouldStreamBrokers =
+        isActiveScanStatus(scanResponse.data?.status) && mappedDashboard.radarTargets.length > 0;
       const pivotColumns = Array.isArray(pivotResponse.data?.columns)
         ? pivotResponse.data.columns
         : [];
@@ -1134,20 +1172,29 @@ export function useDashboard(scanId: string | null): {
         if (shouldStreamBrokers) {
           return {
             ...previous,
+            brokerCount: Math.max(previous.brokerCount, mappedDashboard.brokerCount),
+            exposureCount: Math.max(previous.exposureCount, mappedDashboard.exposureCount),
             deletionCount: mappedDashboard.deletionCount,
             disputeCount: mappedDashboard.disputeCount,
+            threatBreakdown: {
+              email: Math.max(previous.threatBreakdown.email, mappedDashboard.threatBreakdown.email),
+              phone: Math.max(previous.threatBreakdown.phone, mappedDashboard.threatBreakdown.phone),
+              location: Math.max(previous.threatBreakdown.location, mappedDashboard.threatBreakdown.location),
+            },
             pivotGraph: {
               emails: uniqueStrings([...previous.pivotGraph.emails, ...columnValues("emails")]),
               usernames: uniqueStrings([...previous.pivotGraph.usernames, ...columnValues("usernames")]),
               platforms: uniqueStrings([...previous.pivotGraph.platforms, ...columnValues("platforms")]),
-              brokers: uniqueStrings(previous.pivotGraph.brokers),
+              brokers: uniqueStrings([
+                ...previous.pivotGraph.brokers,
+                ...mappedDashboard.pivotGraph.brokers,
+                ...columnValues("brokers"),
+              ]),
             },
             agentStatuses:
               previous.agentStatuses.length > 0 ? previous.agentStatuses : mappedDashboard.agentStatuses,
             activityFeed:
-              previous.activityFeed.length > 0
-                ? previous.activityFeed
-                : mappedDashboard.activityFeed.slice(0, 3),
+              previous.activityFeed.length > 0 ? previous.activityFeed : mappedDashboard.activityFeed,
             isLive: previous.isLive,
           };
         }
