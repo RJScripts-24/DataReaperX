@@ -113,6 +113,24 @@ function normalizeGoogleTokens(tokens: OAuthToken[]): OAuthToken[] {
   });
 }
 
+function isGmailScope(scope: string): boolean {
+  return scope.toLowerCase().includes("gmail");
+}
+
+function isGoogleSignInScope(scope: string): boolean {
+  const normalized = scope.toLowerCase().trim();
+  return (
+    normalized === "openid" ||
+    normalized === "email" ||
+    normalized === "profile" ||
+    normalized.includes("userinfo") ||
+    normalized.includes("sign-in") ||
+    normalized.includes("verify your identity") ||
+    normalized.includes("see your email address") ||
+    normalized.includes("see your basic profile info")
+  );
+}
+
 const COMPANIES = [
   { name: "Google",    emoji: "" },
   { name: "Instagram", emoji: "" },
@@ -236,9 +254,23 @@ export default function AccessMirror() {
   const [report, setReport] = useState<DataMirrorReport | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const activeTokenCount = Math.max(googleTokens.length - severedIds.size, 0);
-  const highRiskTokens = googleTokens.filter((token) => token.risk === "HIGH" && !severedIds.has(token.id));
+  const activeTokens = googleTokens.filter((token) => !severedIds.has(token.id));
+  const activeTokenCount = activeTokens.length;
+  const highRiskTokens = activeTokens.filter((token) => token.risk === "HIGH");
   const highRiskCount = highRiskTokens.length;
+  const activeScopeCount = activeTokens.reduce((total, token) => total + token.permissions.length, 0);
+  const reportAuthorizedApps = report?.authorizedApps ?? [];
+  const appsWithGmailAccessCount = reportAuthorizedApps.filter((app) =>
+    app.scopes.some((scope) => isGmailScope(scope))
+  ).length;
+  const appsWithSignInAccessCount = reportAuthorizedApps.filter((app) =>
+    app.scopes.some((scope) => isGoogleSignInScope(scope))
+  ).length;
+  const appsWithBothAccessCount = reportAuthorizedApps.filter((app) => {
+    const hasGmailAccess = app.scopes.some((scope) => isGmailScope(scope));
+    const hasSignInAccess = app.scopes.some((scope) => isGoogleSignInScope(scope));
+    return hasGmailAccess && hasSignInAccess;
+  }).length;
 
   useEffect(() => {
     let isMounted = true;
@@ -626,6 +658,32 @@ export default function AccessMirror() {
                     This list shows scopes from your current OAuth grant. Full third-party app history comes from Google Takeout parsing in Data Drop.
                   </PressureText>
 
+                  <div className="flex flex-wrap gap-2" style={{ marginBottom: "12px" }}>
+                    {[
+                      { label: "Apps", value: activeTokenCount },
+                      { label: "Scopes", value: activeScopeCount },
+                      { label: "High-risk", value: highRiskCount },
+                    ].map((stat) => (
+                      <div
+                        key={stat.label}
+                        className="hand-drawn-card"
+                        style={{
+                          minWidth: "96px",
+                          padding: "8px 10px",
+                          backgroundColor: COLORS.paper,
+                          border: "1px dashed rgba(0,0,0,0.16)",
+                        }}
+                      >
+                        <PressureText as="p" style={{ fontFamily: "'Caveat', cursive", fontSize: "1.2rem", lineHeight: 1 }}>
+                          {stat.value}
+                        </PressureText>
+                        <PressureText as="p" style={{ fontFamily: "'Patrick Hand', cursive", color: COLORS.textSec, fontSize: "0.76rem" }}>
+                          {stat.label}
+                        </PressureText>
+                      </div>
+                    ))}
+                  </div>
+
                   <div style={{ borderTop: "1.5px dashed rgba(0,0,0,0.14)", paddingTop: "12px", marginTop: "8px" }}>
                     <PressureText as="p" style={{ fontFamily: "'Patrick Hand', cursive", marginBottom: "10px", color: COLORS.text }}>
                       Authorized apps ({activeTokenCount})
@@ -924,6 +982,31 @@ export default function AccessMirror() {
                       <PressureText as="h3" style={{ fontFamily: "'Caveat', cursive", fontSize: "1.35rem", marginBottom: "10px" }}>
                         Authorized Apps Detected
                       </PressureText>
+                      <div className="flex flex-wrap gap-2" style={{ marginBottom: "10px" }}>
+                        {[
+                          { label: "Places with Gmail access", value: appsWithGmailAccessCount },
+                          { label: "Places with Google Sign-in", value: appsWithSignInAccessCount },
+                          { label: "Places with both", value: appsWithBothAccessCount },
+                        ].map((metric) => (
+                          <div
+                            key={metric.label}
+                            className="hand-drawn-card"
+                            style={{
+                              minWidth: "160px",
+                              padding: "8px 10px",
+                              backgroundColor: COLORS.paper,
+                              border: "1px dashed rgba(0,0,0,0.16)",
+                            }}
+                          >
+                            <PressureText as="p" style={{ fontFamily: "'Caveat', cursive", fontSize: "1.2rem", lineHeight: 1 }}>
+                              {metric.value}
+                            </PressureText>
+                            <PressureText as="p" style={{ fontFamily: "'Patrick Hand', cursive", color: COLORS.textSec, fontSize: "0.76rem" }}>
+                              {metric.label}
+                            </PressureText>
+                          </div>
+                        ))}
+                      </div>
                       <div className="space-y-3">
                         {report.authorizedApps.map((app) => (
                           <div key={`${app.app}-${app.grantedDate}`} style={{ borderTop: "1.5px dashed rgba(0,0,0,0.12)", paddingTop: "10px" }}>

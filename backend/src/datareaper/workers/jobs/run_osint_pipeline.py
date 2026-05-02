@@ -14,6 +14,7 @@ from datareaper.db.models.discovered_account import DiscoveredAccount
 from datareaper.db.models.graph_edge import GraphEdge
 from datareaper.db.models.graph_node import GraphNode
 from datareaper.db.models.identity_profile import IdentityProfile
+from datareaper.db.models.broker_case import BrokerCase
 from datareaper.db.models.scan_job import ScanJob
 from datareaper.db.models.seed import Seed
 from datareaper.db.repositories.scan_repo import is_terminal_scan_status
@@ -88,6 +89,20 @@ def _is_transient_db_error(exc: Exception) -> bool:
         "connection reset",
     )
     return any(marker in message for marker in transient_markers)
+
+
+def _should_enqueue_discover_targets(
+    *,
+    cycle_number: int,
+    account_count: int,
+    new_accounts: int,
+    sites_found: int,
+    has_existing_broker_cases: bool,
+) -> bool:
+    if new_accounts > 0 or sites_found > 0:
+        return True
+    # First cycle can still seed broker discovery from existing/sibling profile hits.
+    return cycle_number == 1 and account_count > 0 and not has_existing_broker_cases
 
 
 async def run_osint_pipeline(ctx: dict, scan_id: str) -> dict:
@@ -484,33 +499,67 @@ async def run_osint_pipeline(ctx: dict, scan_id: str) -> dict:
         )
         await session.commit()
 
+        existing_cases_result = await session.execute(
+            select(BrokerCase.id).where(BrokerCase.scan_job_id == scan_id).limit(1)
+        )
+        has_existing_broker_cases = existing_cases_result.scalar_one_or_none() is not None
+
         discover_job_id = None
-        if queue is not None and (new_accounts > 0 or sites_found_in_cycle > 0):
+        should_enqueue_discover = _should_enqueue_discover_targets(
+            cycle_number=cycle_number,
+            account_count=len(accounts),
+            new_accounts=new_accounts,
+            sites_found=sites_found_in_cycle,
+            has_existing_broker_cases=has_existing_broker_cases,
+        )
+        if queue is not None and should_enqueue_discover:
             discover_job_id = await queue.enqueue("discover_targets", scan_id=scan_id)
 
         await session.refresh(scan, attribute_names=["status"])
         next_job_id = None
-        material_progress = new_accounts + sites_found_in_cycle + len(profiles)
-        if queue is not None and material_progress > 0 and not is_terminal_scan_status(scan.status):
+        signal_progress = new_accounts + sites_found_in_cycle
+        should_requeue_osint = (
+            queue is not None
+            and signal_progress > 0
+            and not is_terminal_scan_status(scan.status)
+        )
+        if should_requeue_osint:
             next_job_id = await queue.enqueue_in(
                 "run_osint_pipeline",
                 delay_seconds=OSINT_REQUEUE_DELAY_SECONDS,
                 dedupe=False,
                 scan_id=scan_id,
             )
-        elif material_progress == 0:
-            scan.current_stage = "osint_complete"
-            scan.progress = max(scan.progress or 0, 45)
-            scan.status = "completed"
-            session.add(
-                ActivityEvent(
-                    id=new_id("evt"),
-                    scan_job_id=scan_id,
-                    event_type="System",
-                    message="OSINT pipeline completed with no new signal; auto-requeue skipped.",
-                    payload={"stage": "osint", "status": "completed", "cycle": cycle_number},
+        elif signal_progress == 0 and not discover_job_id:
+            if has_existing_broker_cases:
+                scan.current_stage = "inbox_monitoring"
+                scan.progress = max(scan.progress or 0, 90)
+                scan.status = "active"
+                session.add(
+                    ActivityEvent(
+                        id=new_id("evt"),
+                        scan_job_id=scan_id,
+                        event_type="System",
+                        message=(
+                            "OSINT produced no new signal; transitioning to inbox monitoring "
+                            "for existing broker cases."
+                        ),
+                        payload={"stage": "osint", "status": "active", "cycle": cycle_number},
+                    )
                 )
-            )
+            else:
+                scan.current_stage = "osint_complete"
+                scan.progress = max(scan.progress or 0, 45)
+                scan.status = "completed"
+                session.add(
+                    ActivityEvent(
+                        id=new_id("evt"),
+                        scan_job_id=scan_id,
+                        event_type="System",
+                        message="OSINT pipeline completed with no new signal; auto-requeue skipped.",
+                        payload={"stage": "osint", "status": "completed", "cycle": cycle_number},
+                    )
+                )
             await session.commit()
 
         await publish(

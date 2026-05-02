@@ -84,6 +84,7 @@ def test_reuse_existing_running_scan_requeues_when_stale(monkeypatch) -> None:
             session=fake_session,  # type: ignore[arg-type]
             normalized_seed="user@email.com",
             seed_type="email",
+            owner_google_sub=None,
             jurisdiction="DPDP",
             seed_count=1,
         )
