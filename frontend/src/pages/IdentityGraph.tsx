@@ -111,8 +111,10 @@ type PreparedGraphData = {
   edges: GraphEdge[];
 };
 
+const PLATFORM_RING_CLUSTER_KEY = "__platform_ring__";
+
 const RING_RADIUS_BY_TYPE: Record<Exclude<GraphNode["type"], "seed">, number> = {
-  platform: 148,
+  platform: 168,
   username: 246,
   identity: 346,
   target: 452,
@@ -133,7 +135,7 @@ const RING_LABEL_WIDTH_BY_TYPE: Record<Exclude<GraphNode["type"], "seed">, numbe
   target: 192,
 };
 const RING_PADDING_BY_TYPE: Record<Exclude<GraphNode["type"], "seed">, number> = {
-  platform: 44,
+  platform: 56,
   username: 54,
   identity: 64,
   target: 76,
@@ -176,6 +178,14 @@ const PLATFORM_EQUIVALENTS = new Map([
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(value, max));
+}
+
+function abbreviateGraphLabel(label: string, maxLen: number) {
+  const t = String(label).trim();
+  if (t.length <= maxLen) {
+    return t;
+  }
+  return `${t.slice(0, Math.max(1, maxLen - 1))}…`;
 }
 
 function slugifyGraphText(value: string) {
@@ -552,7 +562,7 @@ function getRingRadius(type: Exclude<GraphNode["type"], "seed">, ringNodes: Grap
   const circumferenceRadius = footprints.reduce((total, footprint) => total + footprint, 0) / (Math.PI * 2);
   const chordRadius = maxFootprint / (2 * Math.sin(Math.PI / Math.max(ringNodes.length, 3)));
   const densityOffset =
-    type === "platform" ? Math.max(0, ringNodes.length - 8) * 14 :
+    type === "platform" ? Math.max(0, ringNodes.length - 6) * 22 :
     type === "username" ? Math.max(0, ringNodes.length - 6) * 18 :
     type === "identity" ? Math.max(0, ringNodes.length - 4) * 24 :
     Math.max(0, ringNodes.length - 3) * 28;
@@ -651,7 +661,7 @@ function getNodeLevel(type: GraphNode["type"]) {
 function getClusterGap(type: Exclude<GraphNode["type"], "seed">) {
   switch (type) {
     case "platform":
-      return 0.08;
+      return 0.11;
     case "username":
       return 0.1;
     case "identity":
@@ -666,9 +676,9 @@ function getClusterGap(type: Exclude<GraphNode["type"], "seed">) {
 function getNodeBandAmplitude(type: GraphNode["type"]) {
   switch (type) {
     case "platform":
-      return 16;
+      return 52;
     case "username":
-      return 20;
+      return 32;
     case "identity":
       return 24;
     case "target":
@@ -687,9 +697,19 @@ function getRingArcSpan(radius: number, footprint: number, minimum: number) {
   return Math.max(footprint / Math.max(radius, 1), minimum);
 }
 
+function getRingArcSpanForType(
+  radius: number,
+  footprint: number,
+  type: Exclude<GraphNode["type"], "seed">
+) {
+  const minimum =
+    type === "platform" ? 0.29 : type === "username" ? 0.2 : type === "identity" ? 0.19 : 0.18;
+  return getRingArcSpan(radius, footprint, minimum);
+}
+
 function getClusterSpan(radius: number, type: Exclude<GraphNode["type"], "seed">, nodes: RingPlacementCandidate[]) {
-  const innerGap = getClusterGap(type) * 0.6;
-  const itemSpans = nodes.map((candidate) => getRingArcSpan(radius, candidate.footprint, type === "platform" ? 0.16 : 0.18));
+  const innerGap = getClusterGap(type) * 0.72;
+  const itemSpans = nodes.map((candidate) => getRingArcSpanForType(radius, candidate.footprint, type));
   return itemSpans.reduce((total, span) => total + span, 0) + innerGap * Math.max(0, nodes.length - 1);
 }
 
@@ -777,7 +797,7 @@ function buildClusterAngles(
     }
     return left.node.label.localeCompare(right.node.label);
   });
-  const spans = orderedNodes.map((candidate) => getRingArcSpan(radius, candidate.footprint, type === "platform" ? 0.16 : 0.18));
+  const spans = orderedNodes.map((candidate) => getRingArcSpanForType(radius, candidate.footprint, type));
   const totalSpan = spans.reduce((total, span) => total + span, 0) + innerGap * Math.max(0, orderedNodes.length - 1);
   let cursor = centerAngle - totalSpan / 2;
 
@@ -787,11 +807,15 @@ function buildClusterAngles(
     cursor += spans[index] / 2 + innerGap;
     const clusterSize = orderedNodes.length;
     const bandOffset =
-      clusterSize >= 5
-        ? ((index % 3) - 1) * (type === "platform" ? 18 : 24)
-        : clusterSize >= 3
-          ? (index % 2 === 0 ? -14 : 14)
-          : 0;
+      type === "platform" && clusterSize >= 12
+        ? ((index % 5) - 2) * 34
+        : type === "platform" && clusterSize >= 7
+          ? ((index % 4) - 1.5) * 28
+          : clusterSize >= 5
+            ? ((index % 3) - 1) * (type === "platform" ? 24 : 24)
+            : clusterSize >= 3
+              ? (index % 2 === 0 ? -16 : 16)
+              : 0;
     return {
       candidate,
       angle,
@@ -854,6 +878,49 @@ function buildStraightEdgeGeometry(fromNode: PositionedGraphNode, toNode: Positi
   };
 }
 
+/** Curved edge so hub spokes fan tangentially instead of stacking as straight lines. */
+function buildCurvedEdgePath(
+  fromNode: PositionedGraphNode,
+  toNode: PositionedGraphNode,
+  graphCenter: { x: number; y: number },
+  edge: RoutedGraphEdge
+): string {
+  const { x1, y1, x2, y2 } = buildStraightEdgeGeometry(fromNode, toNode);
+  const mx = (x1 + x2) / 2;
+  const my = (y1 + y2) / 2;
+  const radialMidX = mx - graphCenter.x;
+  const radialMidY = my - graphCenter.y;
+  const radialLen = Math.hypot(radialMidX, radialMidY);
+  let tangentX: number;
+  let tangentY: number;
+  if (radialLen < 6) {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const len = Math.hypot(dx, dy) || 1;
+    tangentX = -dy / len;
+    tangentY = dx / len;
+  } else {
+    tangentX = -radialMidY / radialLen;
+    tangentY = radialMidX / radialLen;
+  }
+
+  const fromLaneBias = edge.fromLane - (edge.fromLaneCount - 1) / 2;
+  const toLaneBias = edge.toLane - (edge.toLaneCount - 1) / 2;
+  const laneMix = fromLaneBias + toLaneBias * 0.65;
+  const side = laneMix >= 0 ? 1 : -1;
+  const px = tangentX * side;
+  const py = tangentY * side;
+
+  const hubEdge = fromNode.type === "seed" || toNode.type === "seed";
+  const bendBase = hubEdge ? 42 : 28;
+  let bend = bendBase + edge.orbitOffset * 2.4 + Math.abs(fromLaneBias) * 16 + Math.abs(toLaneBias) * 12;
+  bend = Math.min(bend, Math.hypot(x2 - x1, y2 - y1) * 0.42);
+
+  const cpx = mx + px * bend;
+  const cpy = my + py * bend;
+  return `M ${x1} ${y1} Q ${cpx} ${cpy} ${x2} ${y2}`;
+}
+
 function getSegmentOrientation(ax: number, ay: number, bx: number, by: number, cx: number, cy: number) {
   return (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
 }
@@ -890,7 +957,7 @@ function relaxPositionedNodes(
   }));
   const nodeMap = new Map(mutableNodes.map((node) => [node.id, node]));
 
-  for (let iteration = 0; iteration < 140; iteration += 1) {
+  for (let iteration = 0; iteration < 220; iteration += 1) {
     const forces = new Map<string, { x: number; y: number }>();
 
     for (const node of mutableNodes) {
@@ -956,13 +1023,13 @@ function relaxPositionedNodes(
         const dx = rightNode.x - leftNode.x;
         const dy = rightNode.y - leftNode.y;
         const distance = Math.hypot(dx, dy) || 0.001;
-        const threshold = Math.max(62, (leftConstraint.footprint + rightConstraint.footprint) * 0.52);
+        const threshold = Math.max(80, (leftConstraint.footprint + rightConstraint.footprint) * 0.68);
 
         if (distance >= threshold) {
           continue;
         }
 
-        const push = (threshold - distance) * 0.24;
+        const push = (threshold - distance) * 0.4;
         const unitX = dx / distance;
         const unitY = dy / distance;
         const leftForce = forces.get(leftNode.id) ?? { x: 0, y: 0 };
@@ -1039,10 +1106,10 @@ function relaxPositionedNodes(
         const unitY = dy / distance;
         const firstForce = forces.get(firstOuter.id) ?? { x: 0, y: 0 };
         const secondForce = forces.get(secondOuter.id) ?? { x: 0, y: 0 };
-        firstForce.x -= unitX * 9;
-        firstForce.y -= unitY * 9;
-        secondForce.x += unitX * 9;
-        secondForce.y += unitY * 9;
+        firstForce.x -= unitX * 12;
+        firstForce.y -= unitY * 12;
+        secondForce.x += unitX * 12;
+        secondForce.y += unitY * 12;
         forces.set(firstOuter.id, firstForce);
         forces.set(secondOuter.id, secondForce);
       }
@@ -1157,9 +1224,9 @@ function buildRoutedEdges(nodes: PositionedGraphNode[], edges: GraphEdge[]): Rou
   return routedEdges.map((edge) => ({
     ...edge,
     orbitOffset:
-      (Math.max(edge.fromLaneCount, edge.toLaneCount) - 1) * 16 +
-      Math.abs(edge.fromLane - (edge.fromLaneCount - 1) / 2) * 12 +
-      Math.abs(edge.toLane - (edge.toLaneCount - 1) / 2) * 12,
+      (Math.max(edge.fromLaneCount, edge.toLaneCount) - 1) * 22 +
+      Math.abs(edge.fromLane - (edge.fromLaneCount - 1) / 2) * 18 +
+      Math.abs(edge.toLane - (edge.toLaneCount - 1) / 2) * 18,
   }));
 }
 
@@ -1355,11 +1422,19 @@ function buildSmartNodeLayout(nodes: GraphNode[], edges: GraphEdge[]): GraphLayo
       const componentSetting = componentSettings.get(candidate.componentId);
       const sharedParentId = componentSetting?.parentId ?? candidate.primaryParentId;
       const sharedAngle = componentSetting?.preferredAngle ?? candidate.preferredAngle;
+      const clusterKey =
+        type === "platform"
+          ? PLATFORM_RING_CLUSTER_KEY
+          : candidate.branchRootId
+            ? `branch:${candidate.branchRootId}`
+            : sharedParentId
+              ? `parent:${sharedParentId}`
+              : `component:${candidate.componentId}`;
       return {
         node: candidate.node,
         preferredAngle: sharedAngle,
         footprint: candidate.footprint,
-        clusterKey: candidate.branchRootId ? `branch:${candidate.branchRootId}` : sharedParentId ? `parent:${sharedParentId}` : `component:${candidate.componentId}`,
+        clusterKey,
         primaryParentId: sharedParentId,
         branchRootId: candidate.branchRootId,
       };
@@ -1375,7 +1450,10 @@ function buildSmartNodeLayout(nodes: GraphNode[], edges: GraphEdge[]): GraphLayo
     const clusters: RingPlacementCluster[] = Array.from(clusterMap.entries())
       .map(([key, clusterNodes]) => ({
         key,
-        preferredAngle: averageAngle(clusterNodes.map((candidate) => candidate.preferredAngle)) ?? clusterNodes[0].preferredAngle,
+        preferredAngle:
+          key === PLATFORM_RING_CLUSTER_KEY
+            ? -Math.PI / 2
+            : averageAngle(clusterNodes.map((candidate) => candidate.preferredAngle)) ?? clusterNodes[0].preferredAngle,
         span: getClusterSpan(radius, type, clusterNodes),
         nodes: clusterNodes,
       }))
@@ -1491,10 +1569,20 @@ function buildSmartNodeLayout(nodes: GraphNode[], edges: GraphEdge[]): GraphLayo
   };
 }
 
-function getNodeLabelStyle(node: PositionedGraphNode, size: number): CSSProperties {
-  const labelWidth = estimateLabelWidth(node.type, node.label);
-  const stagger = node.ringCount > 8 ? ((node.ringIndex % 3) - 1) * 18 : node.ringCount > 4 ? (node.ringIndex % 2) * 18 : 0;
-  const radialOffset = size + 34 + Math.abs(stagger);
+function getNodeLabelStyle(node: PositionedGraphNode, size: number, showFullLabel: boolean): CSSProperties {
+  const labelForWidth = showFullLabel ? node.label : abbreviateGraphLabel(node.label, node.type === "platform" ? 14 : node.type === "username" ? 18 : 22);
+  const labelWidth = Math.min(estimateLabelWidth(node.type, node.label), estimateLabelWidth(node.type, labelForWidth) + 8);
+  const staggerStep = node.type === "platform" ? 22 : 18;
+  const stagger =
+    node.ringCount > 10
+      ? ((node.ringIndex % 5) - 2) * staggerStep
+      : node.ringCount > 6
+        ? ((node.ringIndex % 3) - 1) * staggerStep
+        : node.ringCount > 4
+          ? (node.ringIndex % 2) * staggerStep
+          : 0;
+  const radialBase = node.type === "platform" ? size + 40 : size + 34;
+  const radialOffset = radialBase + Math.abs(stagger) * 0.35 + (showFullLabel ? 10 : 0);
   const offsetX = Math.cos(node.angle) * radialOffset;
   const offsetY = Math.sin(node.angle) * radialOffset;
   const tangentX = -Math.sin(node.angle) * stagger;
@@ -2067,21 +2155,20 @@ export default function IdentityGraph() {
                 }
 
                 const highlighted = hoveredNodeId ? edge.fromNodeId === hoveredNodeId || edge.toNodeId === hoveredNodeId : false;
-                const geometry = buildStraightEdgeGeometry(fromNode, toNode);
+                const pathD = buildCurvedEdgePath(fromNode, toNode, { x: GRAPH_CENTER, y: GRAPH_CENTER }, edge);
 
                 return (
-                  <motion.line
+                  <motion.path
                     key={edge.key}
-                    x1={geometry.x1}
-                    y1={geometry.y1}
-                    x2={geometry.x2}
-                    y2={geometry.y2}
+                    d={pathD}
+                    fill="none"
                     stroke={getNodeColor(fromNode.type)}
-                    strokeWidth={highlighted ? 2.4 : 1.2}
+                    strokeWidth={highlighted ? 2.2 : 1.15}
                     strokeLinecap="round"
-                    strokeDasharray={highlighted ? "none" : "6,4"}
+                    strokeLinejoin="round"
+                    strokeDasharray={highlighted ? "none" : "5,5"}
                     initial={{ opacity: 0 }}
-                    animate={{ opacity: highlighted ? 0.9 : 0.35 }}
+                    animate={{ opacity: highlighted ? 0.88 : 0.26 }}
                   />
                 );
               })}
@@ -2093,6 +2180,9 @@ export default function IdentityGraph() {
                   const color = getNodeColor(node.type);
                   const size = getNodeSize(node.type);
                   const connected = isConnectedToHovered(node.id);
+                  const showFullLabel = hoveredNodeId === node.id || selectedNodeId === node.id;
+                  const labelCap = node.type === "platform" ? 14 : node.type === "username" ? 18 : 22;
+                  const displayLabel = showFullLabel ? node.label : abbreviateGraphLabel(node.label, labelCap);
 
                   return (
                     <motion.div
@@ -2133,13 +2223,17 @@ export default function IdentityGraph() {
                       <div
                         className="absolute text-center"
                         style={{
-                          ...getNodeLabelStyle(node, size),
+                          ...getNodeLabelStyle(node, size, showFullLabel),
                           fontFamily: "'Patrick Hand', cursive",
                           color: COLORS.text,
-                          fontSize: "32px",
+                          fontSize: showFullLabel ? "14px" : "12px",
+                          fontWeight: showFullLabel ? 600 : 500,
+                          letterSpacing: "0.01em",
+                          textShadow: "0 0 6px rgba(253,251,247,0.95), 0 0 10px rgba(253,251,247,0.75)",
                         }}
+                        title={node.label}
                       >
-                        {node.label}
+                        {displayLabel}
                       </div>
                     </motion.div>
                   );
