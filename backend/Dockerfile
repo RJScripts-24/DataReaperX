@@ -13,6 +13,7 @@ WORKDIR /app
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
+        build-essential \
         ca-certificates \
         curl \
         xvfb \
@@ -26,6 +27,7 @@ RUN apt-get update \
         libatk1.0-0 \
         libatspi2.0-0 \
         libcairo2 \
+        libcairo2-dev \
         libdbus-1-3 \
         libdrm2 \
         libgbm1 \
@@ -46,6 +48,7 @@ RUN apt-get update \
         libxfixes3 \
         libxkbcommon0 \
         libxrandr2 \
+        pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
 RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub \
@@ -61,6 +64,9 @@ RUN pip install --no-cache-dir uv
 COPY pyproject.toml README.md ./
 COPY src ./src
 COPY data ./data
+COPY alembic.ini ./alembic.ini
+COPY migrations ./migrations
+COPY scripts/start_render.sh ./scripts/start_render.sh
 
 RUN uv pip install --system .
 
@@ -68,10 +74,11 @@ RUN playwright install --with-deps chromium
 
 RUN useradd -m -u 1000 -s /bin/bash user \
     && mkdir -p /home/user/.cache /app \
+    && chmod +x /app/scripts/start_render.sh \
     && chown -R user:user /home/user /app
 
 USER user
 
 EXPOSE 7860
 
-CMD ["xvfb-run", "-a", "uvicorn", "src.datareaper.main:app", "--host", "0.0.0.0", "--port", "7860"]
+CMD ["xvfb-run", "-a", "./scripts/start_render.sh"]
