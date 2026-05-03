@@ -1,79 +1,446 @@
 <div align="center">
-<img src="frontend/public/images/logo.png" alt="DataReaper Logo" width="300"/>
-<h1 align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=80&duration=3000&pause=1000&color=8B85FF&center=true&vCenter=true&width=800&height=100&lines=DATAREAPER" alt="DataReaper" />
-</h1>
 
-**Autonomous AI-Powered Privacy Defense Platform**
+<img src="frontend/public/images/logo.png" alt="DataReaper Logo" width="220"/>
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.116+-green.svg)](https://fastapi.tiangolo.com/)
-[![React](https://img.shields.io/badge/React-18.3-blue.svg)](https://reactjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
+<br/>
 
-*Your data is exposed. Your identity is mapped. Take it back.*
+<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=72&duration=3000&pause=1000&color=8B85FF&center=true&vCenter=true&width=800&height=100&lines=DATAREAPER" alt="DataReaper" />
 
-[Features](#features) • [Tech Stack](#tech-stack) • [Getting Started](#getting-started) • [Architecture](#architecture) • [Screenshots](#screenshots)
+<br/>
+
+<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=18&duration=4000&pause=800&color=A0A0B0&center=true&vCenter=true&multiline=false&width=700&height=40&lines=Autonomous+AI-Powered+Privacy+Defense+Platform;Hunt+Down+Your+Exposed+Data.+Force+Its+Deletion.;OSINT+%E2%80%A2+Identity+Graphs+%E2%80%A2+Legal+Automation+%E2%80%A2+Email+Warfare" alt="Tagline" />
+
+<br/><br/>
+
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.116+-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/React-18.3-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://reactjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Latest-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Redis](https://img.shields.io/badge/Redis-Latest-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io/)
+[![License](https://img.shields.io/badge/License-MIT-8B85FF?style=for-the-badge)](LICENSE)
+
+<br/>
+
+> *Your data is exposed. Your identity is mapped. Take it back.*
+
+<br/>
+
+**[Features](#-features) • [Architecture](#-architecture) • [Tech Stack](#-tech-stack) • [Getting Started](#-getting-started) • [API Docs](#-api-documentation) • [Screenshots](#-screenshots)**
 
 </div>
 
 ---
 
-## 📖 Overview
+## ⚡ What is DataReaper?
 
-**DataReaper** is an autonomous AI system that hunts down your exposed personal data across the web and forces its deletion — without you lifting a finger. It combines advanced OSINT (Open Source Intelligence) techniques, AI-powered identity resolution, and automated legal compliance workflows to help individuals reclaim their digital privacy.
+DataReaper is a full-stack autonomous AI platform that hunts down your personal data across the web and forces its deletion — without you lifting a finger.
 
-Data brokers are silently collecting, packaging, and selling your personal data faster than you can track it. DataReaper transforms fragmented public data into a unified identity graph, then weaponizes it to systematically eliminate your digital footprint from data broker databases.
+Data brokers silently collect, package, and sell your personal information. DataReaper fights back by combining advanced OSINT reconnaissance, AI-powered identity resolution, and automated multi-jurisdiction legal compliance to systematically eliminate your digital footprint.
 
-### 🎯 Key Capabilities
-
-- **🔍 Comprehensive OSINT Scanning**: Continuously scan 100+ platforms and data broker sites using advanced reconnaissance techniques
-- **🧠 AI-Powered Identity Resolution**: Build complete digital identity graphs through intelligent cross-platform pivoting
-- **⚖️ Automated Legal Compliance**: Generate and dispatch legally binding deletion requests (GDPR, CCPA, DPDP Act)
-- **📧 Autonomous Email Warfare**: AI agents handle broker responses, objections, and escalations automatically
-- **📊 Real-Time Intelligence Dashboard**: Monitor exposure levels, track deletion progress, and visualize your identity graph
-- **🎯 War Room Operations**: Coordinate multi-broker deletion campaigns with military precision
+```
+Seed Input  →  OSINT Discovery  →  Identity Graph  →  Broker Detection  →  Legal Dispatch  →  Autonomous Follow-up
+```
 
 ---
 
 ## ✨ Features
 
-### 1. **Intelligent OSINT Discovery**
-- Multi-platform account discovery using email, phone, or username seeds
-- Username enumeration across social networks and forums
-- Profile scraping with anti-detection browser automation
-- Maigret integration for deep username reconnaissance
+<details open>
+<summary><b>🔍 Intelligent OSINT Discovery</b></summary>
+<br/>
 
-### 2. **Identity Graph Construction**
-- AI-powered identity resolution using LLM analysis
-- Cross-platform data correlation and pivoting
-- Visual graph representation of digital footprint
-- Real-time graph updates as new data is discovered
+- Multi-platform account discovery seeded from email, phone, or username
+- Username enumeration via **Maigret** across 3,000+ sites
+- Anti-detection profile scraping with **Playwright** headless browser
+- Web content extraction via **Trafilatura** and **BeautifulSoup4**
+- Configurable probe depth: platform candidates, Maigret top-sites, max connections
+- DuckDuckGo fallback, paste-site search, and search probe layers (feature-flagged)
 
-### 3. **Broker Detection & Verification**
-- Automated scanning of 100+ data broker catalogs
-- Intelligent listing verification with confidence scoring
-- Opt-out rule engine for broker-specific workflows
+</details>
+
+<details>
+<summary><b>🧠 AI-Powered Identity Resolution</b></summary>
+<br/>
+
+- LLM-driven cross-platform data correlation (Groq / llama-3.3-70b-versatile)
+- Force-directed interactive identity graph with node-edge visualization
+- Nodes: seeds, discovered accounts, usernames, aliases, resolved attributes
+- Edges: `pivoted_to`, `discovered_username`, `found_on_broker`, and more
+- Real-time graph updates as new data surfaces during scanning
+
+</details>
+
+<details>
+<summary><b>🎯 Broker Detection & Verification</b></summary>
+<br/>
+
+- Automated scanning against a catalog of 100+ data brokers
+- Confidence-scored listing verification per broker
+- Opt-out rule engine with broker-specific workflows (email / form / phone)
 - Contact point discovery and validation
+- YAML-driven broker catalog — easily extensible
 
-### 4. **Legal Automation Engine**
-- Multi-jurisdiction compliance (GDPR, CCPA, DPDP Act)
-- Automated legal notice generation
+</details>
+
+<details>
+<summary><b>⚖️ Legal Automation Engine</b></summary>
+<br/>
+
+- Multi-jurisdiction compliance: **GDPR**, **CCPA**, **DPDP Act (India)**
+- Automated legal notice generation via AI Legal Agent
 - Escalation workflows for non-compliant brokers
-- Audit trail and compliance tracking
+- Full audit trail and compliance tracking
+- Configurable default jurisdiction per deployment
 
-### 5. **Autonomous Communication Agents**
-- Intent classification for incoming broker emails
-- Context-aware reply generation
-- Objection handling and legal argumentation
+</details>
+
+<details>
+<summary><b>📧 Autonomous Email Warfare</b></summary>
+<br/>
+
+- Gmail OAuth 2.0 integration for sending and receiving
+- AI intent classification for incoming broker emails
+- Context-aware reply generation with objection handling
 - Thread continuity and conversation memory
+- Attachment handling for ID verification requests
+- Periodic inbox sync (every 5 minutes) via background scheduler
 
-### 6. **Privacy War Room**
-- Centralized command center for deletion campaigns
-- Real-time status tracking across all brokers
+</details>
+
+<details>
+<summary><b>🛡️ Tripwire Chrome Extension</b></summary>
+<br/>
+
+- Downloadable Chrome extension (`datareaper-tripwire.zip`) served directly from the API
+- Real-time malicious site detection and threat logging
+- Password field interception monitoring (block / allow tracking)
+- Heartbeat-based session linking via short-lived Redis tokens
+- Shield Logs dashboard: per-hostname threat events and password attempt history
+
+</details>
+
+<details>
+<summary><b>👻 Shadow Browser</b></summary>
+<br/>
+
+- Decoy persona engine — AI-generated fake identities browse in the background
+- Randomizable personas with age, occupation, and interests
+- Decoy session simulation to pollute data broker profiles
+- Per-persona browsing history viewer with search and date grouping
+- Toggle on/off from the dashboard; communicates with the Tripwire extension via `postMessage`
+
+</details>
+
+<details>
+<summary><b>🪞 Access Mirror</b></summary>
+<br/>
+
+- Google OAuth 2.0 connect flow with PKCE
+- Live scope analysis: maps granted scopes to risk levels (LOW / MEDIUM / HIGH)
+- Per-app grant revocation with audit log
+- Data export parser: upload Google Takeout (and Instagram, LinkedIn, Amazon, Spotify, Uber) archives up to 200 MB
+- Extracts authorized OAuth apps from Google Takeout exports
+- Persists reports to PostgreSQL with in-memory fallback
+
+</details>
+
+<details>
+<summary><b>📊 Real-Time Command Center</b></summary>
+<br/>
+
+- Exposure metrics dashboard with live scan progress
+- Activity timeline with chronological event feed
 - Threat level assessment and prioritization
-- Batch operations and bulk actions
+- WebSocket-powered live updates
+- TanStack Query for optimistic UI and background refetching
+
+</details>
+
+<details>
+<summary><b>🎖️ Privacy War Room</b></summary>
+<br/>
+
+- Centralized broker case management
+- One-click deletion request dispatch
+- Email thread viewer with AI-generated legal notices
+- Escalation management for non-compliant brokers
+- Batch operations across multiple broker cases
+- Compliance deadline tracking and response time analytics
+
+</details>
+
+---
+
+## 🏗️ Architecture
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                        Frontend  (React 18 + Vite)                   │
+│                                                                      │
+│  Landing  │  Onboarding  │  Command Center  │  Identity Graph        │
+│  War Room │  Inbox       │  Shield Logs     │  Shadow Browser        │
+│  Access Mirror           │  Google Auth Callback                     │
+│                                                                      │
+│  TanStack Query  ·  React Router 7  ·  Radix UI  ·  Motion          │
+└────────────────────────────┬─────────────────────────────────────────┘
+                             │  REST API  +  WebSocket
+┌────────────────────────────▼─────────────────────────────────────────┐
+│                       Backend  (FastAPI 0.116+)                      │
+│                                                                      │
+│  /api/onboarding   /api/scans      /api/dashboard   /api/recon      │
+│  /api/targets      /api/war-room   /api/inbox        /api/reports   │
+│  /api/events       /api/shield     /api/access-mirror               │
+│  /v1/content       /ws/*                                            │
+│                                                                      │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │                    Agent Orchestration                      │    │
+│  │   Sleuth Agent  ·  Legal Agent  ·  Communications Agent    │    │
+│  │   Prompt Manager  ·  Agent Registry  ·  Base Agent         │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │                      Core Services                         │    │
+│  │  OSINT Engine  ·  Broker Discovery  ·  Email Sync          │    │
+│  │  Legal Compliance  ·  Identity Resolution  ·  Scraper      │    │
+│  │  Access Mirror Parser  ·  Report Builder                   │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │               Background Workers  (ARQ + Redis)            │    │
+│  │  run_osint_pipeline  ·  discover_targets                   │    │
+│  │  send_legal_requests  ·  sync_inbox                        │    │
+│  │  continue_battles  ·  build_report_snapshot (cron)         │    │
+│  │  cleanup_old_events (cron)  ·  sync_active_scan_inboxes    │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+└──────────────────────────────────────────────────────────────────────┘
+                             │
+          ┌──────────────────┼──────────────────┐
+          ▼                  ▼                  ▼
+    PostgreSQL            Redis            Playwright
+    (SQLAlchemy)       (ARQ Queue)       (Headless Browser)
+```
+
+### Multi-Stage Scan Pipeline
+
+```
+1. Validate Seed          →  email / phone / username
+2. Discover Accounts      →  Maigret + platform probes
+3. Extract Usernames      →  cross-platform pivoting
+4. Scrape Profiles        →  Playwright + Trafilatura
+5. Resolve Identity       →  LLM correlation
+6. Discover Targets       →  broker catalog matching
+7. Generate Notices       →  Legal Agent (GDPR/CCPA/DPDP)
+8. Send Requests          →  Gmail OAuth dispatch
+9. Monitor Responses      →  inbox sync + AI triage
+10. Escalate / Follow-up  →  Communications Agent
+```
+
+---
+
+## 🛠️ Tech Stack
+
+### Frontend
+
+| | Technology | Version | Purpose |
+|---|---|---|---|
+| ⚛️ | React | 18.3.1 | UI framework |
+| 🔷 | TypeScript | 5.0+ | Type safety |
+| ⚡ | Vite | 6.4+ | Build tool |
+| 🔄 | TanStack Query | 5.99+ | Server state |
+| 🛣️ | React Router | 7.13+ | Routing |
+| 🎨 | Radix UI | Latest | Accessible primitives (30+ components) |
+| 💨 | Tailwind CSS | 4.1+ | Utility-first styling |
+| 🎬 | Motion | 12.23+ | Animations |
+| 📊 | Recharts | 2.15+ | Data visualization |
+| 🌐 | Axios | 1.15+ | HTTP client |
+| 🔔 | Sonner | 2.0+ | Toast notifications |
+| 📋 | React Hook Form | 7.55+ | Form management |
+| 🖱️ | React DnD | 16.0.1 | Drag and drop |
+
+### Backend
+
+| | Technology | Version | Purpose |
+|---|---|---|---|
+| 🐍 | Python | 3.11+ | Core language |
+| 🚀 | FastAPI | 0.116+ | Web framework |
+| 🗄️ | SQLAlchemy | 2.0+ | Async ORM |
+| ✅ | Pydantic | 2.11+ | Data validation |
+| 🔄 | Alembic | 1.14+ | DB migrations |
+| 🌐 | Uvicorn | 0.34+ | ASGI server |
+| 🐘 | asyncpg | 0.30+ | Async PostgreSQL |
+| 📬 | ARQ | 0.26+ | Async task queue |
+| ⏰ | APScheduler | 3.11+ | Job scheduling |
+| 📝 | Structlog | 25.3+ | Structured logging |
+
+### AI & Automation
+
+| | Technology | Purpose |
+|---|---|---|
+| 🤖 | Groq (llama-3.3-70b) | LLM inference for agents |
+| 🎭 | Playwright | Anti-detection browser automation |
+| 🔍 | Maigret | Username OSINT (3,000+ sites) |
+| 🌿 | BeautifulSoup4 | HTML parsing |
+| 📄 | Trafilatura | Web content extraction |
+| 🔒 | curl-cffi | Anti-detection HTTP client |
+
+### Infrastructure
+
+| | Technology | Purpose |
+|---|---|---|
+| 🐘 | PostgreSQL | Primary database |
+| 🔴 | Redis | Cache + task queue backend |
+| 📧 | Gmail API | OAuth email send/receive |
+| 🔑 | Google OAuth 2.0 | User auth + Access Mirror |
+| 🐳 | Docker | Containerization |
+
+---
+
+## 🗄️ Database Schema
+
+7 Alembic migrations covering 20+ tables:
+
+```
+users                  scan_jobs              seeds
+discovered_accounts    graph_nodes            graph_edges
+brokers                broker_listings        broker_cases
+email_threads          email_messages         attachments
+legal_requests         audit_logs             consent
+activity_events        report_snapshots       agent_runs
+scan_stages            access_mirror_reports  google_oauth_connections
+```
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Python 3.11+
+- Node.js 18+ and pnpm
+- PostgreSQL database
+- Redis server
+- Groq API key
+- Gmail API credentials (for email features)
+
+### Backend Setup
+
+```bash
+# 1. Clone and enter backend
+git clone https://github.com/yourusername/datareaper.git
+cd datareaper/backend
+
+# 2. Install dependencies (uv recommended)
+pip install uv
+uv sync
+
+# 3. Configure environment
+cp .env.example .env
+```
+
+Edit `.env`:
+
+```env
+# Database
+DATABASE_URL=postgresql+asyncpg://user:pass@localhost/datareaper
+SYNC_DATABASE_URL=postgresql+psycopg://user:pass@localhost/datareaper
+
+# Redis
+REDIS_URL=redis://127.0.0.1:6379/0
+
+# AI
+GROQ_API_KEY=your_groq_api_key
+GROQ_MODEL=llama-3.3-70b-versatile
+
+# Google Sign-In + Access Mirror
+GOOGLE_CLIENT_ID=your_client_id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your_client_secret
+
+# Gmail API (inbox/send features)
+GMAIL_CLIENT_ID=your_gmail_client_id
+GMAIL_CLIENT_SECRET=your_gmail_client_secret
+GMAIL_SENDER_EMAIL=your_sender@gmail.com
+GMAIL_SENDER_CLIENT_ID=your_sender_client_id
+GMAIL_SENDER_CLIENT_SECRET=your_sender_client_secret
+GMAIL_SENDER_REFRESH_TOKEN=your_sender_refresh_token
+
+# App
+APP_DEBUG=true
+FRONTEND_URL=http://localhost:5173
+DEFAULT_JURISDICTION=DPDP
+```
+
+```bash
+# 4. Run migrations
+alembic upgrade head
+
+# 5. Seed data (optional)
+python scripts/import_broker_catalog.py
+python scripts/import_platform_catalog.py
+python scripts/seed_demo_data.py
+
+# 6. Start API + worker (Windows)
+.\scripts\start_stack.ps1
+
+# Or manually
+uvicorn datareaper.main:app --reload --app-dir src --port 8000
+arq datareaper.workers.scheduler.WorkerSettings
+```
+
+API available at `http://localhost:8000`
+
+### Frontend Setup
+
+```bash
+cd frontend
+pnpm install
+pnpm dev
+```
+
+Frontend available at `http://localhost:5173`
+
+### Demo Mode
+
+```bash
+cd backend
+python scripts/seed_demo_data.py
+```
+
+Populates sample scans, identity graph, broker cases, and email threads for exploration.
+
+---
+
+## 📚 API Documentation
+
+With the backend running:
+
+- **Swagger UI**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
+- **Health**: http://localhost:8000/api/health
+
+### Key Endpoints
+
+```
+POST   /api/onboarding/start              Start a new privacy scan
+GET    /api/scans/{scan_id}               Scan status and results
+GET    /api/dashboard/overview            Exposure metrics
+GET    /api/recon/graph/{scan_id}         Identity graph data
+GET    /api/targets/{scan_id}             Discovered broker targets
+GET    /api/war-room/cases                All broker cases
+POST   /api/war-room/cases/{id}/dispatch  Send deletion request
+GET    /api/inbox/threads                 Email threads
+POST   /api/inbox/sync                    Sync Gmail inbox
+GET    /api/shield/status                 Tripwire extension status
+POST   /api/shield/token                  Issue shield token
+GET    /api/shield/download               Download Tripwire extension
+GET    /api/access-mirror/google/config   Google OAuth config
+POST   /api/access-mirror/google/connect  Connect Google account
+GET    /api/access-mirror/google/grants   View OAuth grants
+POST   /api/access-mirror/google/revoke   Revoke app access
+POST   /api/access-mirror/parse           Parse data export archive
+GET    /api/reports/{scan_id}             Privacy report
+WS     /ws/scans/{scan_id}               Real-time scan events
+```
 
 ---
 
@@ -82,627 +449,164 @@ Data brokers are silently collecting, packaging, and selling your personal data 
 ### Landing Page
 ![Landing Page](Screenshots/Landing%20Page.png)
 
-**The Gateway to Privacy Reclamation**
-
-The landing page introduces users to DataReaper's mission with a compelling narrative about data exposure and digital privacy. It features:
-- Hero section with clear value proposition
-- Problem statement highlighting data broker threats
-- Feature showcase explaining the three-pillar approach: Scan, Identify, Terminate
-- Process flow visualization showing how DataReaper works
-- Call-to-action for launching privacy protection
+Hero section, problem statement, three-pillar feature showcase (Scan → Identify → Terminate), process flow visualization, and CTA.
 
 ---
 
-### Onboarding Page
+### Onboarding
 ![Onboarding Page](Screenshots/Onboarding%20Page.png)
 
-**Seamless Privacy Journey Initialization**
-
-The onboarding experience guides users through their first privacy scan with:
-- Simple seed input (email, phone, or username)
-- Jurisdiction selection for legal compliance
-- Privacy preferences configuration
-- Real-time scan initialization
-- Educational tooltips explaining each step
+Seed input (email / phone / username), jurisdiction selection (GDPR / CCPA / DPDP), privacy preferences, and scan initialization.
 
 ---
 
-### Command Centre
+### Command Center
 ![Command Centre](Screenshots/Command%20Centre.png)
 
-**Mission Control for Your Digital Privacy**
-
-The Command Centre serves as the central dashboard providing:
-- **Exposure Overview**: Real-time metrics on discovered accounts, data brokers, and deletion progress
-- **Active Scans**: Monitor ongoing OSINT reconnaissance operations
-- **Threat Assessment**: Visual indicators of exposure severity across different categories
-- **Quick Actions**: Launch new scans, review reports, or access the War Room
-- **Timeline View**: Chronological activity feed of discoveries and deletions
-- **Statistics Dashboard**: Charts and graphs showing privacy improvement over time
+Live exposure metrics, active scan monitoring, threat assessment, quick actions, and chronological activity timeline.
 
 ---
 
 ### Identity Graph
 ![Identity Graph](Screenshots/Identity%20Graph.png)
 
-**Visualize Your Digital Footprint**
-
-The Identity Graph provides an interactive visualization of your digital identity:
-- **Node-Based Visualization**: See how your data points connect across platforms
-- **Relationship Mapping**: Understand how brokers correlate your information
-- **Platform Clustering**: Group accounts by social networks, forums, and data brokers
-- **Interactive Exploration**: Click nodes to reveal detailed information
-- **Export Capabilities**: Generate reports from graph data
-- **Real-Time Updates**: Watch the graph evolve as new data is discovered
-
-The graph uses force-directed layout algorithms to show:
-- Seed identifiers (email, phone, username)
-- Discovered platform accounts
-- Extracted usernames and aliases
-- Resolved identity attributes (name, location)
-- Data broker listings and exposures
+Interactive force-directed graph showing seeds, discovered accounts, usernames, aliases, resolved attributes, and broker exposures — with real-time updates.
 
 ---
 
 ### War Room
 ![War Room](Screenshots/War%20Room.png)
 
-**Coordinate Deletion Campaigns with Precision**
-
-The War Room is where deletion operations are planned and executed:
-- **Broker Target List**: Complete inventory of data brokers holding your information
-- **Campaign Status**: Track deletion request status (pending, in-progress, completed, escalated)
-- **Email Thread Viewer**: Review AI-generated legal notices and broker responses
-- **Escalation Management**: Handle non-compliant brokers with automated escalation workflows
-- **Batch Operations**: Execute mass deletion requests across multiple brokers
-- **Compliance Tracking**: Monitor legal deadlines and response times
-- **Agent Activity Log**: See what your AI agents are doing in real-time
-
-Key features include:
-- One-click deletion request dispatch
-- Automated follow-up scheduling
-- Legal template customization
-- Attachment handling for ID verification requests
-- Success rate analytics per broker
+Broker target inventory, deletion campaign status, AI-generated legal notice viewer, escalation management, and batch operations.
 
 ---
 
-## 🏗️ Architecture
+### Shadow Browser
+![Shadow Browser](Screenshots/Shadow%20Browser.jpeg)
 
-DataReaper follows a modern microservices-inspired architecture with clear separation of concerns:
+Decoy persona engine running in the background — AI-generated fake identities browse the web so data brokers see someone else. Shows the currently active persona (Mabel Thornton, 82 · Bridge Player), their interests, a randomize button, the full decoy visit history with timestamps and favicons, simulated account sessions, and a searchable per-persona history panel.
+
+---
+
+### Access Mirror
+![Access Mirror](Screenshots/Access%20Mirror.jpeg)
+
+Your data footprint, laid bare. The Google Hub connects your Google account and surfaces every OAuth grant with risk levels (HIGH / LOW) and a per-app Revoke button. The Universal Data Drop accepts Takeout exports from Google, Instagram, LinkedIn, Amazon, Spotify, Uber, and more — DataReaper parses the archive and shows exactly what each platform has built on you.
+
+---
+
+### Shield Logs
+![Shield Logs](Screenshots/Shield%20Logs.jpeg)
+
+Tripwire threat log pulled live from the Chrome extension. Shows all malicious hostnames detected during browsing — select one to see Tripwire / malicious URL event counts, password interception stats (blocked vs allowed), the full malicious URL log with timestamps, and a per-attempt password field breakdown.
+
+---
+
+## 📁 Project Structure
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     Frontend (React + Vite)                  │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
-│  │ Landing  │  │Onboarding│  │ Command  │  │   War    │   │
-│  │   Page   │  │   Flow   │  │  Center  │  │   Room   │   │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘   │
-│         │              │              │              │       │
-│         └──────────────┴──────────────┴──────────────┘       │
-│                          │                                    │
-│                    TanStack Query                            │
-│                          │                                    │
-└──────────────────────────┼────────────────────────────────────┘
-                           │
-                      REST API / WebSocket
-                           │
-┌──────────────────────────┼────────────────────────────────────┐
-│                   Backend (FastAPI)                           │
-│  ┌────────────────────────────────────────────────────────┐  │
-│  │              API Layer (FastAPI Router)                │  │
-│  │  /onboarding  /scans  /dashboard  /war-room  /inbox   │  │
-│  └────────────────────────────────────────────────────────┘  │
-│                           │                                   │
-│  ┌────────────────────────┼────────────────────────────────┐ │
-│  │                  Agent Orchestration                    │ │
-│  │  ┌──────────┐  ┌──────────┐  ┌──────────────────────┐ │ │
-│  │  │  Sleuth  │  │  Legal   │  │   Communications     │ │ │
-│  │  │  Agent   │  │  Agent   │  │      Agent           │ │ │
-│  │  └──────────┘  └──────────┘  └──────────────────────┘ │ │
-│  └────────────────────────────────────────────────────────┘ │
-│                           │                                   │
-│  ┌────────────────────────┼────────────────────────────────┐ │
-│  │                  Core Services                          │ │
-│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌────────┐ │ │
-│  │  │  OSINT   │  │ Broker   │  │  Email   │  │ Legal  │ │ │
-│  │  │ Engine   │  │Discovery │  │  Sync    │  │Compliance│ │
-│  │  └──────────┘  └──────────┘  └──────────┘  └────────┘ │ │
-│  └────────────────────────────────────────────────────────┘ │
-│                           │                                   │
-│  ┌────────────────────────┼────────────────────────────────┐ │
-│  │              Infrastructure Layer                       │ │
-│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌────────┐ │ │
-│  │  │PostgreSQL│  │  Redis   │  │Playwright│  │  ARQ   │ │ │
-│  │  │  (Neon)  │  │  Cache   │  │ Browser  │  │ Queue  │ │ │
-│  │  └──────────┘  └──────────┘  └──────────┘  └────────┘ │ │
-│  └────────────────────────────────────────────────────────┘ │
-└───────────────────────────────────────────────────────────────┘
-```
-
-### Component Breakdown
-
-#### **Frontend Layer**
-- **React 18.3** with TypeScript for type-safe UI development
-- **Vite** for lightning-fast development and optimized production builds
-- **TanStack Query** for server state management and caching
-- **Radix UI** for accessible, unstyled component primitives
-- **Tailwind CSS 4** for utility-first styling
-- **Motion** (Framer Motion) for smooth animations
-
-#### **API Layer**
-- **FastAPI** for high-performance async API endpoints
-- **Pydantic v2** for request/response validation
-- **WebSocket** support for real-time updates
-- **CORS middleware** for secure cross-origin requests
-
-#### **Agent System**
-- **Sleuth Agent**: OSINT discovery and identity resolution
-- **Legal Agent**: Compliance analysis and notice generation
-- **Communications Agent**: Email intent classification and reply generation
-- **Prompt Manager**: Centralized LLM prompt templates
-
-#### **Core Services**
-- **OSINT Engine**: Account discovery, username enumeration, profile scraping
-- **Broker Discovery**: Catalog management, listing verification, opt-out rules
-- **Email Sync**: Gmail OAuth integration, thread building, attachment handling
-- **Legal Compliance**: Multi-jurisdiction rules, escalation workflows, audit trails
-
-#### **Data Layer**
-- **PostgreSQL (Neon)**: Primary database with async support via asyncpg
-- **SQLAlchemy 2.x**: Modern async ORM with relationship mapping
-- **Alembic**: Database migrations and schema versioning
-
-#### **Background Processing**
-- **ARQ**: Redis-based async task queue for long-running operations
-- **APScheduler**: Cron-like scheduling for periodic scans
-
-#### **External Integrations**
-- **Playwright**: Headless browser automation for anti-detection scraping
-- **Maigret**: Username OSINT across 3000+ sites
-- **Groq**: Fast LLM inference for AI agents
-- **Gmail API**: OAuth-based email access and sending
-
----
-
-## 🛠️ Tech Stack
-
-### **Frontend**
-
-| Technology | Purpose | Version |
-|------------|---------|---------|
-| **React** | UI framework | 18.3.1 |
-| **TypeScript** | Type-safe JavaScript | 5.0+ |
-| **Vite** | Build tool & dev server | 6.4+ |
-| **TanStack Query** | Server state management | 5.99+ |
-| **Radix UI** | Accessible component primitives | Latest |
-| **Tailwind CSS** | Utility-first CSS framework | 4.1+ |
-| **Motion** | Animation library | 12.23+ |
-| **Recharts** | Data visualization | 2.15+ |
-| **React Router** | Client-side routing | 7.13+ |
-| **Axios** | HTTP client | 1.15+ |
-| **Sonner** | Toast notifications | 2.0+ |
-
-### **Backend**
-
-| Technology | Purpose | Version |
-|------------|---------|---------|
-| **Python** | Core language | 3.11+ |
-| **FastAPI** | Web framework | 0.116+ |
-| **SQLAlchemy** | ORM | 2.0+ |
-| **Pydantic** | Data validation | 2.11+ |
-| **Alembic** | Database migrations | 1.14+ |
-| **Uvicorn** | ASGI server | 0.34+ |
-| **PostgreSQL** | Primary database | Latest |
-| **asyncpg** | Async PostgreSQL driver | 0.30+ |
-| **ARQ** | Async task queue | 0.26+ |
-| **Redis** | Cache & queue backend | Latest |
-
-### **AI & Automation**
-
-| Technology | Purpose |
-|------------|---------|
-| **Groq** | Fast LLM inference |
-| **Playwright** | Browser automation |
-| **Maigret** | Username OSINT |
-| **BeautifulSoup4** | HTML parsing |
-| **Trafilatura** | Web content extraction |
-| **curl-cffi** | Anti-detection HTTP client |
-
-### **Email & Communication**
-
-| Technology | Purpose |
-|------------|---------|
-| **Google API Client** | Gmail integration |
-| **google-auth-oauthlib** | OAuth 2.0 flow |
-| **email-validator** | Email validation |
-
-### **DevOps & Testing**
-
-| Technology | Purpose |
-|------------|---------|
-| **pytest** | Testing framework |
-| **pytest-asyncio** | Async test support |
-| **pytest-cov** | Coverage reporting |
-| **Ruff** | Fast Python linter |
-| **Mypy** | Static type checking |
-| **Vitest** | Frontend testing |
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- **Python 3.11+** installed
-- **Node.js 18+** and **pnpm** installed
-- **PostgreSQL** database (or Neon account)
-- **Redis** server running
-- **Gmail API credentials** (for email features)
-- **Groq API key** (for AI agents)
-
-### Backend Setup
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/datareaper.git
-   cd datareaper/backend
-   ```
-
-2. **Install Python dependencies**
-   ```bash
-   # Using uv (recommended)
-   pip install uv
-   uv sync
-
-   # Or using pip
-   pip install -e ".[dev]"
-   ```
-
-3. **Configure environment variables**
-   ```bash
-   cp .env.example .env
-   ```
-
-   Edit `.env` and configure:
-   ```env
-   # Database
-   DATABASE_URL=postgresql+asyncpg://user:pass@localhost/datareaper
-
-   # Redis
-   REDIS_URL=redis://127.0.0.1:6379/0
-
-   # AI
-   GROQ_API_KEY=your_groq_api_key
-
-   # Google sign-in + Access Mirror (Web OAuth client)
-   GOOGLE_CLIENT_ID=your_client_id.apps.googleusercontent.com
-   GOOGLE_CLIENT_SECRET=your_client_secret
-
-   # Gmail API only — optional, for inbox/send features
-   GMAIL_CLIENT_ID=your_gmail_api_client_id
-   GMAIL_CLIENT_SECRET=your_gmail_api_client_secret
-
-   # App
-   APP_DEBUG=true
-   APP_CORS_ORIGINS=["http://localhost:5173"]
-   ```
-
-4. **Run database migrations**
-   ```bash
-   alembic upgrade head
-   ```
-
-5. **Seed initial data** (optional)
-   ```bash
-   python scripts/import_broker_catalog.py
-   python scripts/import_platform_catalog.py
-   python scripts/seed_demo_data.py
-   ```
-
-6. **Start the backend stack**
-   ```powershell
-   # Windows PowerShell
-   .\scripts\start_stack.ps1
-
-   # Or manually start API and worker
-   uvicorn datareaper.main:app --reload --app-dir src --port 8000
-   arq datareaper.worker.WorkerSettings
-   ```
-
-The API will be available at `http://localhost:8000`
-
-### Frontend Setup
-
-1. **Navigate to frontend directory**
-   ```bash
-   cd ../frontend
-   ```
-
-2. **Install dependencies**
-   ```bash
-   pnpm install
-   ```
-
-3. **Configure environment** (if needed)
-   ```bash
-   # Create .env.local
-   echo "VITE_API_URL=http://localhost:8000" > .env.local
-   ```
-
-4. **Start development server**
-   ```bash
-   pnpm dev
-   ```
-
-The frontend will be available at `http://localhost:5173`
-
-### Quick Start with Demo Data
-
-To quickly explore DataReaper with pre-populated demo data:
-
-```bash
-cd backend
-python scripts/seed_demo_data.py
-```
-
-This creates:
-- Sample scan results
-- Demo identity graph
-- Mock broker cases
-- Example email threads
-
----
-
-## 📚 API Documentation
-
-Once the backend is running, visit:
-
-- **Interactive API Docs (Swagger)**: http://localhost:8000/docs
-- **Alternative API Docs (ReDoc)**: http://localhost:8000/redoc
-- **Health Check**: http://localhost:8000/health
-
-### Key API Endpoints
-
-#### Onboarding & Scans
-- `POST /api/onboarding/start` - Initialize new privacy scan
-- `GET /api/scans/{scan_id}` - Get scan status and results
-- `POST /api/scans/{scan_id}/resume` - Resume paused scan
-
-#### Dashboard & Analytics
-- `GET /api/dashboard/overview` - Get exposure metrics
-- `GET /api/dashboard/timeline` - Get activity timeline
-
-#### Identity Graph
-- `GET /api/recon/graph/{scan_id}` - Get identity graph data
-- `GET /api/targets/{scan_id}` - Get discovered broker targets
-
-#### War Room Operations
-- `GET /api/war-room/cases` - List all broker cases
-- `POST /api/war-room/cases/{case_id}/dispatch` - Send deletion request
-- `GET /api/war-room/cases/{case_id}/thread` - Get email thread
-
-#### Inbox & Communications
-- `GET /api/inbox/threads` - List email threads
-- `POST /api/inbox/sync` - Sync Gmail inbox
-- `POST /api/inbox/reply` - Generate AI reply
-
----
-
-## 🧪 Testing
-
-### Backend Tests
-
-```bash
-cd backend
-
-# Run all tests
-pytest
-
-# Run with coverage
-pytest --cov=datareaper --cov-report=html
-
-# Run specific test file
-pytest tests/test_sleuth_agent.py
-
-# Run with verbose output
-pytest -v
-```
-
-### Frontend Tests
-
-```bash
-cd frontend
-
-# Run all tests
-pnpm test
-
-# Run in watch mode
-pnpm test --watch
-
-# Run with coverage
-pnpm test --coverage
+datareaper/
+├── backend/
+│   ├── src/datareaper/
+│   │   ├── agents/          # Sleuth, Legal, Communications agents
+│   │   ├── api/             # FastAPI routes (15 route modules)
+│   │   ├── brokers/         # Broker catalog, discovery, opt-out rules
+│   │   ├── comms/           # Gmail client, OAuth, intent classifier
+│   │   ├── compliance/      # GDPR / CCPA / DPDP legal engine
+│   │   ├── core/            # Config, logging, constants, IDs
+│   │   ├── db/              # Models, repositories, session
+│   │   ├── identity/        # Identity resolution
+│   │   ├── integrations/    # Groq LLM, Playwright browser
+│   │   ├── osint/           # Discovery pipeline
+│   │   ├── scraper/         # Web scraping orchestration
+│   │   ├── services/        # Business logic layer
+│   │   └── workers/         # ARQ jobs + scheduler
+│   ├── data/
+│   │   ├── brokers/         # broker_catalog.yaml, opt_out_rules.yaml
+│   │   ├── legal/           # gdpr_rules.yaml, ccpa_rules.yaml, dpdp_rules.yaml
+│   │   ├── platforms/       # platform_selectors.yaml, probe catalogs
+│   │   └── prompts/         # LLM prompt templates (10 prompts)
+│   ├── migrations/          # 7 Alembic migrations
+│   └── scripts/             # Import, seed, smoke test, replay utilities
+├── frontend/
+│   ├── src/
+│   │   ├── components/      # 18 components including AnimatedDataReaperLogo
+│   │   ├── pages/           # 9 pages
+│   │   ├── lib/             # API client, hooks, WebSocket, session manager
+│   │   └── styles/          # Tailwind, theme, fonts, cursor
+│   └── public/
+└── .codex_tmp_accessmirror/ # Access Mirror component staging blocks
 ```
 
 ---
 
 ## 🔒 Security & Privacy
 
-DataReaper is built with security and privacy as core principles:
-
-### Data Protection
-- **End-to-end encryption** for sensitive user data
-- **Secure credential storage** using environment variables
-- **No third-party tracking** or analytics
-- **Local-first architecture** - your data stays in your database
-
-### Compliance
-- **GDPR compliant** deletion workflows
-- **CCPA compliant** opt-out mechanisms
-- **DPDP Act** (India) support
-- **Audit trails** for all operations
-
-### Security Features
-- **OAuth 2.0** for Gmail integration
-- **JWT-based** session management
-- **Rate limiting** on API endpoints
-- **Input validation** with Pydantic
-- **SQL injection protection** via SQLAlchemy ORM
-- **CORS configuration** for API security
-
-### Responsible Use
-DataReaper is designed for **legitimate privacy protection** only. Users must:
-- Only scan their own personal information
-- Comply with applicable laws and regulations
-- Respect platform terms of service
-- Use automation responsibly
+- Google OAuth 2.0 for user authentication and Gmail access
+- JWT-based session management with realtime tokens for WebSocket auth
+- CORS configured for frontend origin + Chrome extension ID pattern
+- Pydantic v2 input validation on all API endpoints
+- SQLAlchemy ORM for SQL injection protection
+- Audit trail for all compliance operations
+- Consent tracking per user
+- No third-party analytics — your data stays in your database
+- Responsible use: scan only your own personal information
 
 ---
 
-## 📖 Documentation
+## 🧪 Testing
 
-### Project Structure
+```bash
+# Backend
+cd backend
+pytest
+pytest --cov=datareaper --cov-report=html
 
+# Frontend
+cd frontend
+pnpm test
 ```
-datareaper/
-├── backend/
-│   ├── src/datareaper/
-│   │   ├── agents/          # AI agent implementations
-│   │   ├── api/             # FastAPI routes and endpoints
-│   │   ├── brokers/         # Data broker catalog and discovery
-│   │   ├── comms/           # Email sync and communication
-│   │   ├── compliance/      # Legal compliance engine
-│   │   ├── core/            # Core utilities and config
-│   │   ├── identity/        # Identity resolution
-│   │   ├── osint/           # OSINT discovery tools
-│   │   ├── scraper/         # Web scraping orchestration
-│   │   └── worker/          # Background task workers
-│   ├── migrations/          # Alembic database migrations
-│   ├── scripts/             # Utility scripts
-│   ├── tests/               # Test suite
-│   └── data/                # Static data (catalogs, prompts)
-├── frontend/
-│   ├── src/
-│   │   ├── components/      # Reusable UI components
-│   │   ├── pages/           # Page components
-│   │   ├── lib/             # Utilities and API client
-│   │   ├── hooks/           # Custom React hooks
-│   │   └── styles/          # Global styles
-│   └── public/              # Static assets
-└── Screenshots/             # UI screenshots for documentation
-```
-
-### Key Concepts
-
-#### **OSINT Discovery**
-DataReaper uses a multi-stage OSINT pipeline:
-1. **Seed Input**: Start with email, phone, or username
-2. **Account Discovery**: Find associated platform accounts
-3. **Username Enumeration**: Extract usernames and aliases
-4. **Profile Scraping**: Collect detailed profile information
-5. **Identity Resolution**: Use AI to correlate data points
-
-#### **Identity Graph**
-The identity graph is a node-edge data structure representing:
-- **Nodes**: Identifiers, accounts, usernames, attributes, brokers
-- **Edges**: Relationships like "pivoted_to", "discovered_username", "found_on_broker"
-
-#### **Broker Cases**
-Each data broker exposure becomes a "case" with:
-- Discovery metadata (when, how, confidence)
-- Opt-out workflow (email, form, phone)
-- Legal notice generation
-- Email thread tracking
-- Status progression (pending → dispatched → completed)
-
-#### **AI Agents**
-Three specialized agents work autonomously:
-- **Sleuth Agent**: Reconnaissance and discovery
-- **Legal Agent**: Compliance analysis and notice drafting
-- **Communications Agent**: Email triage and response generation
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please follow these guidelines:
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/your-feature`
+3. Commit: `git commit -m 'Add your feature'`
+4. Push: `git push origin feature/your-feature`
+5. Open a Pull Request
 
-1. **Fork the repository**
-2. **Create a feature branch** (`git checkout -b feature/amazing-feature`)
-3. **Commit your changes** (`git commit -m 'Add amazing feature'`)
-4. **Push to the branch** (`git push origin feature/amazing-feature`)
-5. **Open a Pull Request**
+Before committing:
 
-### Development Guidelines
+```bash
+# Backend
+ruff check .
+mypy src/
 
-- Follow **PEP 8** for Python code
-- Use **TypeScript** for all frontend code
-- Write **tests** for new features
-- Update **documentation** as needed
-- Run **linters** before committing:
-  ```bash
-  # Backend
-  ruff check .
-  mypy src/
-
-  # Frontend
-  pnpm lint
-  ```
+# Frontend
+pnpm lint
+```
 
 ---
 
 ## 📄 License
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+MIT License — see [LICENSE](LICENSE) for details.
 
 ---
 
 ## 🙏 Acknowledgments
 
-- **Maigret** - Username OSINT framework
-- **Playwright** - Browser automation
-- **FastAPI** - Modern Python web framework
-- **React** - UI library
-- **Radix UI** - Accessible component primitives
-- **Tailwind CSS** - Utility-first CSS framework
-
----
-
-## 📞 Support
-
-For questions, issues, or feature requests:
-
-- **GitHub Issues**: [Create an issue](https://github.com/yourusername/datareaper/issues)
-- **Email**: support@datareaper.io
-- **Documentation**: [docs.datareaper.io](https://docs.datareaper.io)
-
----
-
-## 🗺️ Roadmap
-
-### Q2 2024
-- [ ] Multi-user support with role-based access control
-- [ ] Mobile app (React Native)
-- [ ] Browser extension for real-time monitoring
-- [ ] Expanded broker catalog (200+ brokers)
-
-### Q3 2024
-- [ ] Automated form submission for non-email opt-outs
-- [ ] Phone call automation for phone-based opt-outs
-- [ ] Integration with password managers
-- [ ] Dark web monitoring
-
-### Q4 2024
-- [ ] Enterprise features (team management, SSO)
-- [ ] API for third-party integrations
-- [ ] Compliance reporting dashboard
-- [ ] AI model fine-tuning for better accuracy
+[Maigret](https://github.com/soxoj/maigret) · [Playwright](https://playwright.dev/) · [FastAPI](https://fastapi.tiangolo.com/) · [React](https://reactjs.org/) · [Radix UI](https://www.radix-ui.com/) · [Tailwind CSS](https://tailwindcss.com/) · [Groq](https://groq.com/)
 
 ---
 
 <div align="center">
 
+<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=14&duration=3000&pause=1000&color=8B85FF&center=true&vCenter=true&width=500&height=30&lines=Hunt+Down+Your+Data.+Force+Its+Deletion." alt="Footer tagline" />
 
+<br/>
 
 [⬆ Back to Top](#datareaper)
 
