@@ -82,4 +82,4 @@ USER user
 
 EXPOSE 7860
 
-CMD ["xvfb-run", "-a", "./scripts/start_render.sh"]
+CMD ["./scripts/start_render.sh"]
